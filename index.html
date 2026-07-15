@@ -12,7 +12,6 @@
     <!-- Header -->
     <header class="main-header">
         <div class="header-left">
-            <button class="menu-toggle" aria-label="Menu">☰</button>
             <a href="/" class="logo">
                 <span class="logo-icon">▶</span>
                 <span class="logo-text">TrendyReels</span>
@@ -26,7 +25,6 @@
         </div>
         <div class="header-right">
             <button id="themeToggle" aria-label="Toggle theme">🌙</button>
-            <a href="admin.html" class="admin-link" title="Admin Panel">⚙️</a>
         </div>
     </header>
 
@@ -34,7 +32,6 @@
     <nav class="category-nav" id="categoryNav">
         <div class="category-scroll">
             <button class="category-pill active" data-category="all">All</button>
-            <!-- Categories will be populated by JS -->
         </div>
     </nav>
 
@@ -60,6 +57,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Secret Admin Button (Bottom Right, Hidden in plain sight) -->
+    <button id="secretAdminBtn" aria-label="Secret Admin">🔒</button>
 
     <!-- Footer -->
     <footer class="main-footer">
@@ -93,4 +93,4 @@
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
 </body>
-              </html>
+</html>
