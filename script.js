@@ -370,8 +370,7 @@ function autoDetectCopyright(title, channel) {
 // ============================================
 // TrendyReels - Main JavaScript (V2.1 - PART 2)
 // ============================================
-
-// --- Fetch Videos ---
+// --- MODULE 9: FETCH VIDEOS (FINAL FIXED VERSION) ---
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -420,8 +419,10 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
             return json.hits.map(video => ({
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
-                thumbnail: video.image || video.webformatURL || video.previewURL,
-                embed_code: `<video controls src="${video.videos.large.url}" poster="${video.webformatURL}"></video>`,
+                // ✅ FINAL FIX: Pixabay کا صحیح تھمب نیل لنک
+                thumbnail: video.previewURL || video.image || video.webformatURL,
+                // ✅ FINAL FIX: ویڈیو کے صحیح لنک (بڑا نہ ہو تو چھوٹا استعمال کریں)
+                embed_code: `<video controls src="${video.videos.large.url || video.videos.tiny.url}" poster="${video.previewURL}"></video>`,
                 channel: video.user || 'Pixabay',
                 is_copyright_free: true
             }));
@@ -431,6 +432,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         }
     }
 }
+
 
 async function handleBotClick(botName) {
     const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
