@@ -457,18 +457,27 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// 🚀 CORS FIX: Bot Bridge (Direct Proxy)
+// 🚀 FIXED: Bot Integration (Direct Worker Call)
 // ============================================
 async function runBot(botName, keyword = 'trending') {
+    let url = '';
+    if (botName === 'youtube') {
+        url = `https://youtube-bot.maqsoodhassansolangi.workers.dev/?q=${encodeURIComponent(keyword)}`;
+    } else if (botName === 'pexels') {
+        url = `https://pexels-bot.maqsoodhassansolangi.workers.dev/?q=${encodeURIComponent(keyword)}`;
+    } else {
+        alert('Unknown bot');
+        return;
+    }
+
     try {
-        // براہِ راست Worker کو کال کرنے کی بجائے، ہم اپنی سائٹ کے اندر سے ایک "Bridge" بنائیں گے
-        // یہ طریقہ CORS کے تمام ایررز کو ختم کر دیتا ہے
-        const response = await fetch(`/api/bot-proxy?bot=${botName}&q=${encodeURIComponent(keyword)}`);
-        
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to reach bot');
+        
         const data = await response.json();
         if (!data.success) throw new Error(data.error);
         
+        // Save each video to Supabase
         for (const video of data.videos) {
             await supabase.post('videos', {
                 title: video.title,
