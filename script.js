@@ -1,8 +1,8 @@
 // ============================================
-// TrendyReels - Modular Script (PART 1)
+// TrendyReels - Main JavaScript (V2.1 - PART 1)
 // ============================================
 
-// --- MODULE 1: CONFIGURATION ---
+// Supabase Configuration
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
@@ -49,7 +49,6 @@ let state = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// --- MODULE 2: THEME MANAGEMENT ---
 function applyTheme() {
     if (state.darkMode) {
         document.body.classList.add('dark-mode');
@@ -76,7 +75,6 @@ function toggleTheme() {
     applyTheme();
 }
 
-// --- MODULE 3: CATEGORIES ---
 async function loadCategories() {
     try {
         const data = await supabase.get('categories');
@@ -126,7 +124,6 @@ function renderCategories() {
     }
 }
 
-// --- MODULE 4: VIDEOS ---
 async function loadVideos() {
     try {
         const data = await supabase.get('videos', { select: '*', order: 'created_at.desc' });
@@ -334,12 +331,8 @@ async function bulkPublish() {
         console.error('Error publishing videos:', error);
         alert('Failed to publish all videos');
     }
-            }
-// ============================================
-// TrendyReels - Modular Script (PART 2)
-// ============================================
+}
 
-// --- MODULE 5: BULK DELETE ---
 async function bulkDelete() {
     const selected = document.querySelectorAll('.video-checkbox:checked');
     if (selected.length === 0) {
@@ -359,90 +352,7 @@ async function bulkDelete() {
     }
 }
 
-// --- MODULE 6: ADS ---
-async function loadAdSlots() {
-    try {
-        const data = await supabase.get('ad_slots', { select: '*' });
-        state.adSlots = data || [];
-        renderAdSlots();
-        return data;
-    } catch (error) {
-        console.error('Error loading ad slots:', error);
-        return [];
-    }
-}
-
-function renderAdSlots() {
-    const grid = $('#adSlotsGrid');
-    if (!grid) return;
-    
-    const defaultSlots = ['header', 'sidebar', 'video_top', 'video_bottom', 'footer', 'mobile'];
-    const slots = state.adSlots.length > 0 ? state.adSlots : defaultSlots.map(name => ({ name, enabled: false, code: '' }));
-    
-    grid.innerHTML = slots.map(slot => `
-        <div class="ad-slot-card" data-name="${slot.name}">
-            <h3>${slot.name.charAt(0).toUpperCase() + slot.name.slice(1)} Ad</h3>
-            <label class="toggle-switch">
-                <input type="checkbox" class="ad-toggle" ${slot.enabled ? 'checked' : ''}>
-                <span class="slider"></span>
-            </label>
-            <span>${slot.enabled ? 'ON' : 'OFF'}</span>
-            <textarea class="ad-code" placeholder="Paste Adsterra code here...">${slot.code || ''}</textarea>
-            <button class="btn-secondary save-ad-btn" style="margin-top:8px;">Save</button>
-        </div>
-    `).join('');
-    
-    grid.querySelectorAll('.save-ad-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const card = btn.closest('.ad-slot-card');
-            const name = card.dataset.name;
-            const enabled = card.querySelector('.ad-toggle').checked;
-            const code = card.querySelector('.ad-code').value;
-            
-            try {
-                const existing = state.adSlots.find(s => s.name === name);
-                if (existing) {
-                    await supabase.patch('ad_slots', { enabled, code }, existing.id);
-                } else {
-                    await supabase.post('ad_slots', { name, enabled, code });
-                }
-                await loadAdSlots();
-                alert('Ad slot saved!');
-            } catch (error) {
-                console.error('Error saving ad slot:', error);
-                alert('Failed to save ad slot');
-            }
-        });
-    });
-}
-
-// --- MODULE 7: SECRET ADMIN ---
-const ADMIN_PASSWORD = 'admin123';
-let tapCount = 0;
-let tapTimer = null;
-
-function initSecretAdmin() {
-    const secretBtn = $('#secretAdminBtn');
-    if (!secretBtn) return;
-    
-    secretBtn.addEventListener('click', () => {
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
-        
-        if (tapCount === 5) {
-            const password = prompt('🔐 Enter Admin Password:');
-            if (password === ADMIN_PASSWORD) {
-                window.location.href = 'admin.html';
-            } else {
-                alert('❌ Wrong password!');
-                tapCount = 0;
-            }
-        }
-    });
-}
-
-// --- MODULE 8: AUTO-DETECT COPYRIGHT ---
+// --- Auto-Detect Copyright ---
 function autoDetectCopyright(title, channel) {
     const restrictedKeywords = [
         'copyright', 'all rights reserved', 'sony', 'warner', 'universal',
@@ -456,9 +366,12 @@ function autoDetectCopyright(title, channel) {
         }
     }
     return true;
-}
+        }
+// ============================================
+// TrendyReels - Main JavaScript (V2.1 - PART 2)
+// ============================================
 
-// --- MODULE 9: FETCH VIDEOS (UPDATED WITH PIXABAY & THUMBNAIL FIX) ---
+// --- Fetch Videos ---
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -468,7 +381,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        // آپ کی نئی Pixabay API کلید
         apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
@@ -508,7 +420,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
             return json.hits.map(video => ({
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
-                // ✅ FIXED: صحیح تھمب نیل لنک
                 thumbnail: video.webformatURL || video.previewURL || video.userImageURL,
                 embed_code: `<video controls src="${video.videos.large.url}" poster="${video.webformatURL}"></video>`,
                 channel: video.user || 'Pixabay',
@@ -521,7 +432,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
     }
 }
 
-// --- MODULE 10: BOT HANDLER ---
 async function handleBotClick(botName) {
     const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
     if (!keyword) return;
@@ -552,7 +462,6 @@ async function handleBotClick(botName) {
     }
 }
 
-// --- MODULE 11: REVIEW PANEL ---
 function showReviewPanel(videos) {
     if (!videos || videos.length === 0) {
         alert('No videos to review.');
@@ -690,7 +599,127 @@ function showReviewPanel(videos) {
     });
 }
 
-// --- MODULE 12: SEARCH ---
+// ============================================
+// 🆕 NEW MODULE: ULTIMATE ADS MANAGER (V2.1)
+// ============================================
+
+async function loadAdSlots() {
+    try {
+        const data = await supabase.get('ad_slots');
+        state.adSlots = data || [];
+        renderAdSlots();
+        return data;
+    } catch (error) {
+        console.error('Error loading ad slots:', error);
+        return [];
+    }
+}
+
+function renderAdSlots() {
+    const grid = $('#adSlotsGrid');
+    if (!grid) return;
+    
+    // 8 Slot Definitions with Mobile & Desktop sizes
+    const slotConfigs = [
+        { name: 'header', label: 'Header', mobile: '320x50', desktop: '728x90' },
+        { name: 'sidebar', label: 'Sidebar', mobile: '300x250', desktop: '300x250' },
+        { name: 'video_top', label: 'Video Top', mobile: '320x50', desktop: '468x60' },
+        { name: 'video_bottom', label: 'Video Bottom', mobile: '320x50', desktop: '468x60' },
+        { name: 'footer', label: 'Footer', mobile: '320x50', desktop: '728x90' },
+        { name: 'mobile', label: 'Mobile', mobile: '320x50', desktop: '-' },
+        { name: 'popup', label: 'Pop-under', mobile: '300x250', desktop: '300x250' },
+        { name: 'sticky', label: 'Sticky Bar', mobile: '160x300', desktop: '-' }
+    ];
+
+    // Merge with existing slots from DB
+    const slots = slotConfigs.map(config => {
+        const existing = state.adSlots.find(s => s.name === config.name);
+        return {
+            ...config,
+            enabled: existing ? existing.enabled : false,
+            mobileCode: existing ? existing.mobileCode || '' : '',
+            desktopCode: existing ? existing.desktopCode || '' : ''
+        };
+    });
+
+    grid.innerHTML = slots.map(slot => `
+        <div class="ad-slot-card" data-name="${slot.name}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h3>${slot.label} Ad</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" class="ad-toggle" ${slot.enabled ? 'checked' : ''}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="font-size:0.8rem; color:#666; margin-bottom:8px;">
+                📱 Mobile: <strong>${slot.mobile}</strong> &nbsp;|&nbsp; 💻 Desktop: <strong>${slot.desktop}</strong>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                    <label style="font-size:0.75rem; font-weight:bold;">📱 Mobile Code</label>
+                    <textarea class="ad-code-mobile" rows="3" placeholder="Paste mobile ad code...">${slot.mobileCode || ''}</textarea>
+                </div>
+                <div>
+                    <label style="font-size:0.75rem; font-weight:bold;">💻 Desktop Code</label>
+                    <textarea class="ad-code-desktop" rows="3" placeholder="Paste desktop ad code...">${slot.desktopCode || ''}</textarea>
+                </div>
+            </div>
+            <button class="btn-secondary save-ad-btn" style="margin-top:8px; width:100%;">💾 Save</button>
+        </div>
+    `).join('');
+
+    // Save Handlers
+    grid.querySelectorAll('.save-ad-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const card = btn.closest('.ad-slot-card');
+            const name = card.dataset.name;
+            const enabled = card.querySelector('.ad-toggle').checked;
+            const mobileCode = card.querySelector('.ad-code-mobile').value;
+            const desktopCode = card.querySelector('.ad-code-desktop').value;
+            
+            try {
+                const existing = state.adSlots.find(s => s.name === name);
+                if (existing) {
+                    await supabase.patch('ad_slots', { enabled, mobileCode, desktopCode }, existing.id);
+                } else {
+                    await supabase.post('ad_slots', { name, enabled, mobileCode, desktopCode });
+                }
+                await loadAdSlots();
+                alert(`✅ ${name} ad slot saved!`);
+            } catch (error) {
+                alert(`❌ Error saving: ${error.message}`);
+            }
+        });
+    });
+}
+
+// --- Secret Admin Entry ---
+const ADMIN_PASSWORD = 'admin123';
+let tapCount = 0;
+let tapTimer = null;
+
+function initSecretAdmin() {
+    const secretBtn = $('#secretAdminBtn');
+    if (!secretBtn) return;
+    
+    secretBtn.addEventListener('click', () => {
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
+        
+        if (tapCount === 5) {
+            const password = prompt('🔐 Enter Admin Password:');
+            if (password === ADMIN_PASSWORD) {
+                window.location.href = 'admin.html';
+            } else {
+                alert('❌ Wrong password!');
+                tapCount = 0;
+            }
+        }
+    });
+}
+
+// --- Search ---
 let searchTimeout = null;
 function handleSearch(query) {
     state.searchQuery = query;
@@ -698,7 +727,7 @@ function handleSearch(query) {
     searchTimeout = setTimeout(() => renderVideos(), 300);
 }
 
-// --- MODULE 13: INITIALIZATION ---
+// --- Init ---
 async function init() {
     applyTheme();
     await loadCategories();
@@ -763,10 +792,8 @@ async function init() {
     
     const bulkPublishBtn = $('#bulkPublishBtn');
     if (bulkPublishBtn) bulkPublishBtn.addEventListener('click', bulkPublish);
-    
     const bulkDeleteBtn = $('#bulkDeleteBtn');
     if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDelete);
-    
     const selectAll = $('#selectAll');
     if (selectAll) {
         selectAll.addEventListener('change', () => {
@@ -774,7 +801,6 @@ async function init() {
         });
     }
 
-    // Bot buttons
     const runYoutubeBtn = $('#runYoutubeBot');
     if (runYoutubeBtn) {
         runYoutubeBtn.addEventListener('click', () => handleBotClick('youtube'));
@@ -785,7 +811,7 @@ async function init() {
         runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
     }
     
-    console.log('TrendyReels initialized (Modular Version)!');
+    console.log('TrendyReels V2.1 initialized!');
 }
 
 if (document.readyState === 'loading') {
