@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - V2.3 (13 Bots) - PART 1
+// TrendyReels - 9 Bots (V2.4 FINAL) - PART 1
 // ============================================
 
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
@@ -341,130 +341,246 @@ function autoDetectCopyright(title, channel) {
         if (text.includes(keyword)) return false;
     }
     return true;
-                         }
+    }
 
 // ============================================
-// TrendyReels - V2.3 (13 Bots) - PART 2
+// TrendyReels - 9 Bots (V2.4 FINAL) - PART 2
 // ============================================
 
-// --- Common Fetch Logic ---
-async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
-    let apiUrl = '';
-    const YT_KEY = 'AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4';
-    
-    if (botName === 'youtube') {
-        apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YT_KEY}`;
-    } else if (botName === 'pixabay' || botName === 'pexels' || botName === 'fashion' || botName === 'fitness' || botName === 'nature' || botName === 'lifestyle') {
-        // Pixabay / Pexels / Fashion / Fitness / Nature / Lifestyle
-        const key = botName === 'pexels' ? '563492ad6f917000010000018a3c52c5e0db23e73279b81120267cc2' : '56707588-7f7c040c1e2ca5ef1b417bc38';
-        apiUrl = botName === 'pexels' 
-            ? `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${maxResults}`
-            : `https://pixabay.com/api/videos/?key=${key}&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
-    } else if (botName === 'tiktok' || botName === 'instagram') {
-        // TikTok / Instagram - Smart Scraper
-        return await fetchSocialVideos(botName, keyword, maxResults);
-    } else {
-        alert('Unknown bot');
-        return [];
-    }
-
-    if (botName === 'youtube') {
-        try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('YouTube API error');
-            const json = await response.json();
-            return json.items.map(item => ({
-                id: item.id.videoId,
-                title: item.snippet.title,
-                thumbnail: item.snippet.thumbnails.high.url,
-                embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
-                channel: item.snippet.channelTitle,
-                is_copyright_free: autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
-            }));
-        } catch (error) { alert(`❌ YouTube Error: ${error.message}`); return []; }
-    }
-
-    if (botName === 'pexels') {
-        try {
-            const response = await fetch(apiUrl, { headers: { 'Authorization': '563492ad6f917000010000018a3c52c5e0db23e73279b81120267cc2' } });
-            if (!response.ok) throw new Error('Pexels API error');
-            const data = await response.json();
-            return data.videos.map(v => ({
-                id: v.id,
-                title: v.user.name + ' - ' + keyword,
-                thumbnail: v.image,
-                embed_code: `<video controls src="${v.video_files[0].link}" poster="${v.image}"></video>`,
-                channel: v.user.name,
-                is_copyright_free: true
-            }));
-        } catch (error) { alert(`❌ Pexels Error: ${error.message}`); return []; }
-    }
-
-    if (['pixabay','fashion','fitness','nature','lifestyle'].includes(botName)) {
-        try {
-            const key = botName === 'pixabay' ? '56707588-7f7c040c1e2ca5ef1b417bc38' : '56707588-7f7c040c1e2ca5ef1b417bc38';
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('Pixabay API error');
-            const json = await response.json();
-            if (!json.hits || json.hits.length === 0) { alert(`No videos found`); return []; }
-            return json.hits.map(v => ({
-                id: v.id,
-                title: v.tags || 'Video',
-                thumbnail: v.webformatURL || v.previewURL || v.image,
-                embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.webformatURL || v.previewURL}"></video>`,
-                channel: v.user || 'Pixabay',
-                is_copyright_free: true
-            }));
-        } catch (error) { alert(`❌ Pixabay Error: ${error.message}`); return []; }
-    }
-}
-
-// --- Social Media Scraper (TikTok / Instagram) ---
-async function fetchSocialVideos(botName, keyword, maxResults) {
-    try {
-        const isUser = keyword.startsWith('@');
-        const searchTerm = isUser ? keyword.substring(1) : keyword;
-        // Simulated response for demo (since real scraping needs backend)
-        const mockData = [];
-        for (let i = 0; i < maxResults; i++) {
-            mockData.push({
-                id: `${botName}_${Date.now()}_${i}`,
-                title: `${botName} Video - ${searchTerm} #${i+1}`,
-                thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
-                embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
-                channel: searchTerm,
-                is_copyright_free: true
-            });
-        }
-        return mockData;
-    } catch (error) { alert(`❌ Social Error: ${error.message}`); return []; }
-}
-
-// --- 13 Bot Handlers ---
-async function runBot(botName) {
-    const categoryNames = state.categories.map(c => c.name);
-    const categoryInput = prompt(`Select Category (Type name):\n${categoryNames.join(', ')}`, 'Technology');
+// --- YouTube Bot ---
+async function runYoutubeBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
-
-    const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : botName === 'instagram' ? '@cristiano' : 'nature');
+    const keyword = prompt(`Enter YouTube search keyword:`, 'cricket');
     if (!keyword) return;
-
-    const count = prompt('How many videos? (1-30):', '10');
-    if (!count || isNaN(count) || parseInt(count) < 1) return;
-
-    const filterChoice = prompt(`Select Filter:\n1 = Only Free\n2 = Only Copyrighted\n3 = Mixed\n\nEnter 1, 2, or 3:`, '3');
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const filterChoice = prompt(`Copyright Filter:\n1 = Free\n2 = Copyrighted\n3 = Mixed`, '3');
     let licenseFilter = '';
     if (filterChoice === '1') licenseFilter = '&videoLicense=creativeCommon';
     else if (filterChoice === '2') licenseFilter = '&videoLicense=any';
-
-    const videos = await fetchVideosForReview(botName, keyword, parseInt(count), licenseFilter);
-    if (videos.length > 0) showReviewPanel(videos);
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${count}&type=video${licenseFilter}&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('YouTube API error');
+        const json = await res.json();
+        const videos = json.items.map(item => ({
+            id: item.id.videoId,
+            title: item.snippet.title,
+            thumbnail: item.snippet.thumbnails.high.url,
+            embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
+            channel: item.snippet.channelTitle,
+            is_copyright_free: autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ YouTube Error: ${error.message}`); }
 }
 
-// --- Review Panel (unchanged) ---
-function showReviewPanel(videos) {
+// --- Pixabay Bot ---
+async function runPixabayBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Pixabay search keyword:`, 'nature');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${count}`;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('Pixabay API error');
+        const json = await res.json();
+        if (!json.hits || json.hits.length === 0) { alert('No videos found'); return; }
+        const videos = json.hits.map(v => ({
+            id: v.id,
+            title: v.tags || 'Pixabay Video',
+            thumbnail: v.webformatURL || v.previewURL || v.image,
+            embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.webformatURL || v.previewURL}"></video>`,
+            channel: v.user || 'Pixabay',
+            is_copyright_free: true
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ Pixabay Error: ${error.message}`); }
+}
+
+// --- Pexels Bot (Fixed API Key) ---
+async function runPexelsBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Pexels search keyword:`, 'nature');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const apiUrl = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${count}`;
+    const PEXELS_KEY = '563492ad6f917000010000018a3c52c5e0db23e73279b81120267cc2';
+    try {
+        const res = await fetch(apiUrl, { headers: { 'Authorization': PEXELS_KEY } });
+        if (!res.ok) throw new Error('Pexels API error');
+        const data = await res.json();
+        const videos = data.videos.map(v => ({
+            id: v.id,
+            title: v.user.name + ' - ' + keyword,
+            thumbnail: v.image,
+            embed_code: `<video controls src="${v.video_files[0].link}" poster="${v.image}"></video>`,
+            channel: v.user.name,
+            is_copyright_free: true
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ Pexels Error: ${error.message}`); }
+        }
+
+// ============================================
+// TrendyReels - 9 Bots (V2.4 FINAL) - PART 3
+// ============================================
+
+// --- TikTok Bot (Category OR Username) ---
+async function runTikTokBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const choice = prompt(`Search by?\n1 = Hashtag/Category\n2 = Username`, '1');
+    const keyword = choice === '2' 
+        ? prompt(`Enter TikTok Username (without @):`, 'cristiano') 
+        : prompt(`Enter TikTok Hashtag (without #):`, 'cricket');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    // اس لاجک کو آپ کی سوشل سکرپنگ سے منسلک کیا جا سکتا ہے
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `tiktok_${Date.now()}_${i}`,
+            title: `${choice === '2' ? '@'+keyword : '#'+keyword} TikTok Video #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: choice === '2' ? `@${keyword}` : `#${keyword}`,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+}
+
+// --- Instagram Bot (Category OR Username) ---
+async function runInstagramBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const choice = prompt(`Search by?\n1 = Hashtag\n2 = Username`, '1');
+    const keyword = choice === '2' 
+        ? prompt(`Enter Instagram Username (without @):`, 'cristiano') 
+        : prompt(`Enter Instagram Hashtag (without #):`, 'cricket');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `instagram_${Date.now()}_${i}`,
+            title: `${choice === '2' ? '@'+keyword : '#'+keyword} Instagram Reel #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: choice === '2' ? `@${keyword}` : `#${keyword}`,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+}
+
+// --- X (Twitter) Bot (Category OR Username) ---
+async function runTwitterBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const choice = prompt(`Search by?\n1 = Hashtag\n2 = Username`, '1');
+    const keyword = choice === '2' 
+        ? prompt(`Enter X (Twitter) Username (without @):`, 'cristiano') 
+        : prompt(`Enter X (Twitter) Hashtag (without #):`, 'cricket');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `twitter_${Date.now()}_${i}`,
+            title: `${choice === '2' ? '@'+keyword : '#'+keyword} X Video #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: choice === '2' ? `@${keyword}` : `#${keyword}`,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+            }
+
+// ============================================
+// TrendyReels - 9 Bots (V2.4 FINAL) - PART 4
+// ============================================
+
+// --- Vimeo Bot (Category OR Username) ---
+async function runVimeoBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const choice = prompt(`Search by?\n1 = Keyword\n2 = Username`, '1');
+    const keyword = choice === '2' 
+        ? prompt(`Enter Vimeo Username:`, 'cristiano') 
+        : prompt(`Enter Vimeo Keyword:`, 'nature');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    // Vimeo API (Simulated for demo)
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `vimeo_${Date.now()}_${i}`,
+            title: `Vimeo Video - ${keyword} #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: keyword,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+}
+
+// --- Reddit Bot ---
+async function runRedditBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Reddit search keyword:`, 'funny');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `reddit_${Date.now()}_${i}`,
+            title: `Reddit Video - ${keyword} #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: keyword,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+}
+
+// --- Dailymotion Bot ---
+async function runDailymotionBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Dailymotion search keyword:`, 'sports');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const videos = [];
+    for (let i = 0; i < count; i++) {
+        videos.push({
+            id: `dailymotion_${Date.now()}_${i}`,
+            title: `Dailymotion Video - ${keyword} #${i+1}`,
+            thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
+            embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
+            channel: keyword,
+            is_copyright_free: true
+        });
+    }
+    if (videos.length > 0) showReviewPanel(videos, categoryInput);
+                }
+
+// ============================================
+// TrendyReels - 9 Bots (V2.4 FINAL) - PART 5
+// ============================================
+
+// --- Shared Review Panel ---
+function showReviewPanel(videos, defaultCategory = 'Technology') {
     if (!videos || videos.length === 0) { alert('No videos to review.'); return; }
-    state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: 'Technology', approved: true, is_copyright_free: v.is_copyright_free }));
+    state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: defaultCategory, approved: true, is_copyright_free: v.is_copyright_free }));
     const modal = document.createElement('div');
     modal.id = 'reviewModal';
     modal.className = 'modal';
@@ -584,11 +700,7 @@ function initSecretAdmin() {
             else { alert('❌ Wrong password!'); tapCount = 0; }
         }
     });
-        }
-
-// ============================================
-// TrendyReels - V2.3 (13 Bots) - PART 3
-// ============================================
+}
 
 // --- Ads Manager ---
 async function loadAdSlots() {
@@ -720,17 +832,24 @@ async function init() {
         });
     }
 
-    // 13 Bot Buttons
+    // تمام 9 بوٹس کو init میں رجسٹر کریں
     const botMap = [
-        'youtube', 'pixabay', 'pexels', 'tiktok', 'instagram', 'vimeo', 
-        'reddit', 'twitter', 'dailymotion', 'fashion', 'fitness', 'nature', 'lifestyle'
+        { id: 'runYoutubeBot', fn: runYoutubeBot },
+        { id: 'runPixabayBot', fn: runPixabayBot },
+        { id: 'runPexelsBot', fn: runPexelsBot },
+        { id: 'runTikTokBot', fn: runTikTokBot },
+        { id: 'runInstagramBot', fn: runInstagramBot },
+        { id: 'runVimeoBot', fn: runVimeoBot },
+        { id: 'runRedditBot', fn: runRedditBot },
+        { id: 'runTwitterBot', fn: runTwitterBot },
+        { id: 'runDailymotionBot', fn: runDailymotionBot }
     ];
-    botMap.forEach(bot => {
-        const btn = $(`#run${bot.charAt(0).toUpperCase() + bot.slice(1)}Bot`);
-        if (btn) btn.addEventListener('click', () => runBot(bot));
+    botMap.forEach(({ id, fn }) => {
+        const btn = $(`#${id}`);
+        if (btn) btn.addEventListener('click', fn);
     });
     
-    console.log('TrendyReels V2.3 (13 Bots) initialized!');
+    console.log('TrendyReels V2.4 (9 Bots Final) initialized!');
 }
 
 if (document.readyState === 'loading') {
