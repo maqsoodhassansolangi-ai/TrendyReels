@@ -420,7 +420,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
             return json.hits.map(video => ({
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
-                thumbnail: video.webformatURL || video.previewURL || video.userImageURL,
+                thumbnail: video.image || video.webformatURL || video.previewURL,
                 embed_code: `<video controls src="${video.videos.large.url}" poster="${video.webformatURL}"></video>`,
                 channel: video.user || 'Pixabay',
                 is_copyright_free: true
