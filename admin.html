@@ -27,18 +27,14 @@
     </nav>
 
     <main class="admin-content">
-        <!-- Videos Tab -->
         <section id="videosTab" class="admin-tab-content active">
             <div class="admin-actions">
                 <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
                 <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
                 <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
-                
-                <!-- 9 Bot Buttons -->
                 <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
                     <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white; flex:1; min-width:100px;">▶ YouTube</button>
                     <button id="runPixabayBot" class="btn-secondary" style="background:#25D366; color:white; flex:1; min-width:100px;">▶ Pixabay</button>
-                    <button id="runPexelsBot" class="btn-secondary" style="background:#ff0000; color:white; flex:1; min-width:100px;">▶ Pexels</button>
                     <button id="runTikTokBot" class="btn-secondary" style="background:#ff0050; color:white; flex:1; min-width:100px;">▶ TikTok</button>
                     <button id="runInstagramBot" class="btn-secondary" style="background:#c13584; color:white; flex:1; min-width:100px;">▶ Instagram</button>
                     <button id="runVimeoBot" class="btn-secondary" style="background:#1ab7ea; color:white; flex:1; min-width:100px;">▶ Vimeo</button>
@@ -47,40 +43,24 @@
                     <button id="runDailymotionBot" class="btn-secondary" style="background:#0066ff; color:white; flex:1; min-width:100px;">▶ Dailymotion</button>
                 </div>
             </div>
-            
             <div class="admin-table-wrapper">
                 <table class="admin-table">
                     <thead>
-                        <tr>
-                            <th><input type="checkbox" id="selectAll"></th>
-                            <th>Title</th>
-                            <th>Category</th>
-                            <th>Embed</th>
-                            <th>Copyright</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
+                        <tr><th><input type="checkbox" id="selectAll"></th><th>Title</th><th>Category</th><th>Embed</th><th>Copyright</th><th>Status</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="adminVideoTableBody"></tbody>
                 </table>
             </div>
         </section>
-
-        <!-- Ads Tab -->
         <section id="adsTab" class="admin-tab-content">
             <h2>Adsterra Ad Manager</h2>
             <div class="ad-slots-grid" id="adSlotsGrid"></div>
         </section>
-
-        <!-- Settings Tab -->
         <section id="settingsTab" class="admin-tab-content">
             <h2>Settings</h2>
             <div class="settings-card">
                 <h3>Theme Preference</h3>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="adminThemeSwitch">
-                    <span class="slider"></span>
-                </label>
+                <label class="toggle-switch"><input type="checkbox" id="adminThemeSwitch"><span class="slider"></span></label>
                 <span>Dark Mode</span>
             </div>
             <div class="settings-card">
@@ -91,7 +71,6 @@
             </div>
         </section>
     </main>
-
     <div id="addVideoModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -112,7 +91,6 @@
             </form>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
