@@ -202,7 +202,7 @@ function getThumbnail(embedCode) {
     if (dmMatch) return `https://www.dailymotion.com/thumbnail/video/${dmMatch[1]}`;
     
     // 3. Pixabay / HTML5 Video Poster
-    const posterMatch = embedCode.match(/poster="([^"]+)"/);
+    const posterMatch = embedCode.match(/poster=\s*[\"'\\]*([^\"'>\s\\]+)/i);
     if (posterMatch) return posterMatch[1];
     
     return '';
