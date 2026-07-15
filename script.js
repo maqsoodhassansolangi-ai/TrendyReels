@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript (FINAL COMPLETE VERSION)
+// TrendyReels - Main JavaScript (FINAL AUTO-DETECT VERSION)
 // ============================================
 
 // Supabase Configuration
@@ -42,7 +42,7 @@ let state = {
     searchQuery: '',
     darkMode: localStorage.getItem('trendyreels-theme') === 'dark',
     currentVideo: null,
-    pendingVideos: [] // نئی ویڈیوز کو ریویو کرنے کے لیے
+    pendingVideos: []
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -424,81 +424,139 @@ function initSecretAdmin() {
             }
         }
     });
-            }
+                                   }
 // ============================================
-// TrendyReels - Main JavaScript (FINAL COMPLETE VERSION - PART 2)
-// ============================================
-
-// ============================================
-// 🚀 NEW FEATURE: REVIEW PANEL + MULTI-CATEGORY
+// 🚀 FINAL: SMART AUTO-DETECT LOGIC
 // ============================================
 
-// یہ فنکشن بوٹ سے ویڈیوز لائے گا اور انہیں ریویو پینل میں دکھائے گا (Supabase میں نہیں ڈالے گا)
-async function fetchVideosForReview(botName, keyword, maxResults) {
+// خودکار کاپی رائٹ پہچاننے کا فنکشن
+function autoDetectCopyright(title, channel) {
+    const restrictedKeywords = [
+        'copyright', 'all rights reserved', 'sony', 'warner', 'universal',
+        'disney', 'netflix', 'amazon prime', 'hbo', 'paramount',
+        '©', '®', 'trademark', 'licensed', 'exclusive'
+    ];
+    const text = (title + ' ' + channel).toLowerCase();
+    for (const keyword of restrictedKeywords) {
+        if (text.includes(keyword)) {
+            return false; // کاپی رائٹ والی
+        }
+    }
+    return true; // کاپی رائٹ فری
+}
+
+// ============================================
+// 🚀 UPDATED: FETCH VIDEOS WITH COPYRIGHT FILTER
+// ============================================
+
+async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
+    const YOUTUBE_API_KEY = 'AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4';
     
     if (botName === 'youtube') {
-        apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&videoLicense=creativeCommon&type=video&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`;
+        apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        // Pexels کے لیے آپ کو ایک ورکنگ کلید درکار ہے، ورنہ ہم ڈمی ڈیٹا استعمال کر سکتے ہیں
-        // یہاں ایک مثال ہے:
+        const PEXELS_API_KEY = '563492ad6f91700001000001fd1c593ed5e74e7b85f5fcb265cfc836';
         apiUrl = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
         return [];
     }
 
-    try {
-        let data;
-        if (isPexels) {
-            // Pexels کے لیے آپ کو ایک کلید درکار ہے۔ ہم ڈمی ڈیٹا استعمال کر رہے ہیں۔
-            const mockVideos = [];
-            for(let i=0; i<maxResults; i++) {
-                mockVideos.push({
-                    id: 1000 + i,
-                    title: `Pexels Stock Video - ${keyword} #${i+1}`,
-                    embed_code: `<video controls src="https://www.w3schools.com/html/mov_bbb.mp4" poster="https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg"></video>`,
-                    is_copyright_free: true,
-                    category: 'Technology',
-                    thumbnail: 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'
-                });
-            }
-            data = { success: true, videos: mockVideos };
-        } else {
+    if (botName === 'youtube') {
+        try {
             const response = await fetch(apiUrl);
             if (!response.ok) throw new Error('YouTube API error');
             const json = await response.json();
-            const videos = json.items.map(item => ({
+            return json.items.map(item => ({
                 id: item.id.videoId,
                 title: item.snippet.title,
                 thumbnail: item.snippet.thumbnails.high.url,
                 embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
-                is_copyright_free: true,
-                category: 'Technology'
+                channel: item.snippet.channelTitle,
+                is_copyright_free: autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
             }));
-            data = { success: true, videos };
+        } catch (error) {
+            alert(`❌ YouTube API Error: ${error.message}`);
+            return [];
         }
-        
-        if (!data.success) throw new Error(data.error || 'Bot returned error');
-        return data.videos;
-    } catch (error) {
-        alert(`❌ Error fetching videos: ${error.message}`);
-        return [];
+    }
+
+    if (botName === 'pexels') {
+        try {
+            const response = await fetch(apiUrl, {
+                headers: { 'Authorization': PEXELS_API_KEY }
+            });
+            if (!response.ok) throw new Error('Pexels API error');
+            const data = await response.json();
+            return data.videos.map(video => ({
+                id: video.id,
+                title: video.user.name + ' - ' + keyword,
+                thumbnail: video.image,
+                embed_code: `<video controls src="${video.video_files[0].link}" poster="${video.image}"></video>`,
+                channel: video.user.name,
+                is_copyright_free: true // Pexels تمام ویڈیوز مفت ہیں
+            }));
+        } catch (error) {
+            alert(`❌ Pexels API Error: ${error.message}`);
+            return [];
+        }
     }
 }
 
-// ریویو پینل بنانے کا فنکشن (UI + Logic)
+// ============================================
+// 🚀 NEW BOT HANDLER (WITH FILTER & AUTO-DETECT)
+// ============================================
+
+async function handleBotClick(botName) {
+    const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
+    if (!keyword) return;
+
+    const count = prompt('How many videos? (1-50):', '10');
+    if (!count || isNaN(count) || parseInt(count) < 1) return;
+
+    const filterChoice = prompt(
+        `Select Copyright Filter:\n1 = Only Copyright Free (Creative Commons)\n2 = Only Copyrighted (Restricted)\n3 = Mixed (API default)\n\nEnter 1, 2, or 3:`, 
+        '3'
+    );
+    
+    let licenseFilter = '';
+    if (filterChoice === '1') {
+        licenseFilter = '&videoLicense=creativeCommon';
+        alert('🔍 Fetching ONLY Copyright Free videos...');
+    } else if (filterChoice === '2') {
+        licenseFilter = '&videoLicense=any';
+        alert('🔍 Fetching ONLY Copyrighted (Restricted) videos...');
+    } else {
+        licenseFilter = '';
+        alert('🔍 Fetching Mixed videos (Auto-Detect will handle)...');
+    }
+
+    const videos = await fetchVideosForReview(botName, keyword, parseInt(count), licenseFilter);
+    if (videos.length > 0) {
+        showReviewPanel(videos);
+    }
+}
+
+// ============================================
+// 🚀 REVIEW PANEL WITH SMART DETECT + MANUAL OVERRIDE
+// ============================================
+
 function showReviewPanel(videos) {
     if (!videos || videos.length === 0) {
         alert('No videos to review.');
         return;
     }
 
-    state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: 'Technology', approved: true }));
+    state.pendingVideos = videos.map(v => ({ 
+        ...v, 
+        selectedCategory: 'Technology', 
+        approved: true,
+        is_copyright_free: v.is_copyright_free
+    }));
 
-    // ایک Modal بنائیں جو ویڈیوز کو ریویو کرنے کے لیے استعمال ہوگا
     const modal = document.createElement('div');
     modal.id = 'reviewModal';
     modal.className = 'modal';
@@ -514,12 +572,14 @@ function showReviewPanel(videos) {
             <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
                 <button id="approveAllBtn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">✅ Approve All</button>
                 <button id="rejectAllBtn" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">❌ Reject All</button>
-                <button id="saveSelectedBtn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">💾 Save Selected</button>
+                <button id="saveSelectedBtn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">💾 Save Selected</button>
             </div>
             <div id="reviewList" style="display: flex; flex-direction: column; gap: 10px;">
     `;
 
     videos.forEach((v, index) => {
+        const statusText = v.is_copyright_free ? '✅ Free (Auto-Detected)' : '❌ Restricted (Auto-Detected)';
+        const statusColor = v.is_copyright_free ? '#4CAF50' : '#f44336';
         html += `
             <div class="review-item" data-index="${index}" style="display: flex; align-items: center; gap: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
                 <img src="${v.thumbnail || getThumbnail(v.embed_code)}" style="width: 120px; height: 68px; object-fit: cover; border-radius: 4px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%2268%22><rect fill=%22%23ccc%22/></svg>'">
@@ -532,6 +592,10 @@ function showReviewPanel(videos) {
                         </select>
                         <label style="font-size: 0.85rem; margin-left: 10px;">
                             <input type="checkbox" class="review-approve" data-index="${index}" checked> Approve
+                        </label>
+                        <label style="font-size: 0.85rem; margin-left: 10px; color: ${statusColor};">
+                            <input type="checkbox" class="review-copyright" data-index="${index}" ${v.is_copyright_free ? 'checked' : ''}> 
+                            Copyright Free? <span style="font-size: 0.7rem;">(${statusText})</span>
                         </label>
                     </div>
                 </div>
@@ -550,7 +614,6 @@ function showReviewPanel(videos) {
     modal.innerHTML = html;
     document.body.appendChild(modal);
 
-    // ریویو پینل کو بند کرنے کے لیے ایونٹ لسٹنرز
     const closeModal = () => {
         if (modal.parentNode) modal.parentNode.removeChild(modal);
     };
@@ -558,17 +621,14 @@ function showReviewPanel(videos) {
     document.getElementById('closeReviewModalBottom').addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // "Approve All" بٹن
     document.getElementById('approveAllBtn').addEventListener('click', () => {
         document.querySelectorAll('.review-approve').forEach(cb => cb.checked = true);
     });
 
-    // "Reject All" بٹن
     document.getElementById('rejectAllBtn').addEventListener('click', () => {
         document.querySelectorAll('.review-approve').forEach(cb => cb.checked = false);
     });
 
-    // "Save Selected" بٹن (جب کوئی ویڈیو اپروو ہو تو ظاہر ہوگا)
     const saveBtn = document.getElementById('saveSelectedBtn');
     const checkApproved = () => {
         const anyApproved = document.querySelectorAll('.review-approve:checked').length > 0;
@@ -577,16 +637,16 @@ function showReviewPanel(videos) {
     document.querySelectorAll('.review-approve').forEach(cb => cb.addEventListener('change', checkApproved));
     checkApproved();
 
-    // منتخب ویڈیوز کو Supabase میں محفوظ کرنا
     saveBtn.addEventListener('click', async () => {
         const toSave = [];
         document.querySelectorAll('.review-item').forEach(item => {
             const index = parseInt(item.dataset.index);
             const isApproved = item.querySelector('.review-approve').checked;
             const category = item.querySelector('.review-category').value;
+            const isCopyrightFree = item.querySelector('.review-copyright').checked;
             if (isApproved) {
                 const v = state.pendingVideos[index];
-                toSave.push({ ...v, category });
+                toSave.push({ ...v, category, is_copyright_free: isCopyrightFree });
             }
         });
 
@@ -619,28 +679,6 @@ function showReviewPanel(videos) {
             saveBtn.disabled = false;
         }
     });
-}
-
-// ============================================
-// 🚀 UPDATED BOT HANDLER (With Review Panel)
-// ============================================
-async function handleBotClick(botName) {
-    const categoryNames = state.categories.map(c => c.name);
-    const categoryInput = prompt(`Select Category (Type name):\n${categoryNames.join(', ')}`, 'Technology');
-    if (!categoryInput) return;
-
-    const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
-    if (!keyword) return;
-
-    const count = prompt('How many videos? (1-50):', '10');
-    if (!count || isNaN(count) || parseInt(count) < 1) return;
-
-    const videos = await fetchVideosForReview(botName, keyword, parseInt(count));
-    if (videos.length > 0) {
-        // ہر ویڈیو میں ڈیفالٹ کیٹیگری سیٹ کریں جو صارف نے منتخب کی ہے
-        videos.forEach(v => v.category = categoryInput);
-        showReviewPanel(videos);
-    }
 }
 
 // ============================================
@@ -730,7 +768,7 @@ async function init() {
         });
     }
 
-    // نئے ریویو پینل والے بٹنز
+    // Bot buttons
     const runYoutubeBtn = $('#runYoutubeBot');
     if (runYoutubeBtn) {
         runYoutubeBtn.addEventListener('click', () => handleBotClick('youtube'));
@@ -741,7 +779,7 @@ async function init() {
         runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
     }
     
-    console.log('TrendyReels initialized (Final Full Version)!');
+    console.log('TrendyReels initialized (Final Auto-Detect Version)!');
 }
 
 if (document.readyState === 'loading') {
