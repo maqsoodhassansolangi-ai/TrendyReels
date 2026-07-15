@@ -469,7 +469,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
     } else if (botName === 'pexels') {
         isPexels = true;
         // UPDATED: Pixabay API (No key needed - I added a default one)
-        apiUrl = `https://pixabay.com/api/videos/?key=24682980-6213a56b07ff6435507f70dca&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
+        apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
         return [];
