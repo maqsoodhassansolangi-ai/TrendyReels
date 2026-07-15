@@ -563,3 +563,34 @@ body.dark-mode .form-group input, .form-group select, .form-group textarea {
     .video-title { font-size: 0.85rem; }
     .video-meta { font-size: 0.7rem; }
     }
+
+/* V2.1: New Ad Slot Styles */
+.ad-slot-card {
+    background: var(--card-light);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-light);
+    margin-bottom: 20px;
+}
+body.dark-mode .ad-slot-card {
+    background: var(--card-dark);
+    box-shadow: var(--shadow-dark);
+}
+.ad-slot-card h3 {
+    margin-bottom: 8px;
+}
+.ad-slot-card textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-family: var(--font-family);
+    resize: vertical;
+    background: var(--bg-light);
+    color: var(--text-light);
+}
+body.dark-mode .ad-slot-card textarea {
+    background: var(--bg-dark);
+    color: var(--text-dark);
+    border-color: var(--border-dark);
+}
