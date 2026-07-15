@@ -1,7 +1,8 @@
 // ============================================
-// TrendyReels - Main JavaScript (FINAL VERSION)
+// TrendyReels - Main JavaScript (FINAL FULL VERSION - PART 1)
 // ============================================
 
+// Supabase Configuration
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
@@ -12,6 +13,7 @@ const supabase = {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
             ...options.headers
         };
         const response = await fetch(url, { ...options, headers });
@@ -33,6 +35,7 @@ const supabase = {
     }
 };
 
+// State
 let state = {
     videos: [],
     categories: [],
@@ -44,9 +47,11 @@ let state = {
     pendingVideos: []
 };
 
+// DOM References
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+// Theme Management
 function applyTheme() {
     if (state.darkMode) {
         document.body.classList.add('dark-mode');
@@ -73,6 +78,7 @@ function toggleTheme() {
     applyTheme();
 }
 
+// Categories
 async function loadCategories() {
     try {
         const data = await supabase.get('categories');
@@ -122,6 +128,7 @@ function renderCategories() {
     }
 }
 
+// Videos
 async function loadVideos() {
     try {
         const data = await supabase.get('videos', { select: '*', order: 'created_at.desc' });
@@ -330,28 +337,31 @@ async function bulkPublish() {
         alert('Failed to publish all videos');
     }
 }
+// ============================================
+// TrendyReels - Main JavaScript (FINAL FULL VERSION - PART 2)
+// ============================================
 
+// ✅ FIXED: Bulk Delete (with data-id and proper ID extraction)
 async function bulkDelete() {
-    if (!confirm('Delete selected videos?')) return;
-    const selected = [];
-    document.querySelectorAll('.video-checkbox:checked').forEach(cb => {
-        selected.push(parseInt(cb.dataset.id));
-    });
+    const selected = document.querySelectorAll('.video-checkbox:checked');
     if (selected.length === 0) {
         alert('No videos selected.');
         return;
     }
+    const ids = Array.from(selected).map(cb => parseInt(cb.dataset.id));
+    if (!confirm(`Delete ${ids.length} selected video(s)?`)) return;
     try {
-        for (const id of selected) {
+        for (const id of ids) {
             await supabase.delete('videos', id);
         }
         await loadVideos();
+        alert(`✅ ${ids.length} video(s) deleted.`);
     } catch (error) {
-        console.error('Error deleting videos:', error);
-        alert('Failed to delete selected videos');
+        alert(`❌ Error: ${error.message}`);
     }
 }
 
+// Ads
 async function loadAdSlots() {
     try {
         const data = await supabase.get('ad_slots', { select: '*' });
@@ -408,6 +418,7 @@ function renderAdSlots() {
     });
 }
 
+// Secret Admin Entry
 const ADMIN_PASSWORD = 'admin123';
 let tapCount = 0;
 let tapTimer = null;
@@ -431,14 +442,9 @@ function initSecretAdmin() {
             }
         }
     });
-            }
+}
 
-
-// ============================================
-// 🚀 FINAL: SMART AUTO-DETECT LOGIC
-// ============================================
-
-// خودکار کاپی رائٹ پہچاننے کا فنکشن
+// Auto-Detect Copyright
 function autoDetectCopyright(title, channel) {
     const restrictedKeywords = [
         'copyright', 'all rights reserved', 'sony', 'warner', 'universal',
@@ -448,16 +454,13 @@ function autoDetectCopyright(title, channel) {
     const text = (title + ' ' + channel).toLowerCase();
     for (const keyword of restrictedKeywords) {
         if (text.includes(keyword)) {
-            return false; // کاپی رائٹ والی
+            return false;
         }
     }
-    return true; // کاپی رائٹ فری
+    return true;
 }
 
-// ============================================
-// 🚀 UPDATED: FETCH VIDEOS WITH NEW PEXELS KEY
-// ============================================
-
+// Fetch Videos for Review
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -467,7 +470,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        // یہ نئی ورکنگ Pexels کلید ہے
         apiUrl = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
@@ -506,7 +508,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
                 thumbnail: video.image,
                 embed_code: `<video controls src="${video.video_files[0].link}" poster="${video.image}"></video>`,
                 channel: video.user.name,
-                is_copyright_free: true // Pexels کی تمام ویڈیوز مفت ہیں
+                is_copyright_free: true
             }));
         } catch (error) {
             alert(`❌ Pexels API Error: ${error.message}`);
@@ -515,10 +517,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
     }
 }
 
-// ============================================
-// 🚀 NEW BOT HANDLER (WITH FILTER & AUTO-DETECT)
-// ============================================
-
+// Bot Handler
 async function handleBotClick(botName) {
     const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
     if (!keyword) return;
@@ -527,7 +526,7 @@ async function handleBotClick(botName) {
     if (!count || isNaN(count) || parseInt(count) < 1) return;
 
     const filterChoice = prompt(
-        `Select Copyright Filter:\n1 = Only Copyright Free (Creative Commons)\n2 = Only Copyrighted (Restricted)\n3 = Mixed (API default)\n\nEnter 1, 2, or 3:`, 
+        `Select Copyright Filter:\n1 = Only Copyright Free\n2 = Only Copyrighted\n3 = Mixed\n\nEnter 1, 2, or 3:`, 
         '3'
     );
     
@@ -537,10 +536,10 @@ async function handleBotClick(botName) {
         alert('🔍 Fetching ONLY Copyright Free videos...');
     } else if (filterChoice === '2') {
         licenseFilter = '&videoLicense=any';
-        alert('🔍 Fetching ONLY Copyrighted (Restricted) videos...');
+        alert('🔍 Fetching ONLY Copyrighted videos...');
     } else {
         licenseFilter = '';
-        alert('🔍 Fetching Mixed videos (Auto-Detect will handle)...');
+        alert('🔍 Fetching Mixed videos...');
     }
 
     const videos = await fetchVideosForReview(botName, keyword, parseInt(count), licenseFilter);
@@ -549,10 +548,7 @@ async function handleBotClick(botName) {
     }
 }
 
-// ============================================
-// 🚀 REVIEW PANEL WITH SMART DETECT + MANUAL OVERRIDE
-// ============================================
-
+// Review Panel
 function showReviewPanel(videos) {
     if (!videos || videos.length === 0) {
         alert('No videos to review.');
@@ -690,9 +686,7 @@ function showReviewPanel(videos) {
     });
 }
 
-// ============================================
 // Search
-// ============================================
 let searchTimeout = null;
 function handleSearch(query) {
     state.searchQuery = query;
@@ -700,9 +694,7 @@ function handleSearch(query) {
     searchTimeout = setTimeout(() => renderVideos(), 300);
 }
 
-// ============================================
 // Initialization
-// ============================================
 async function init() {
     applyTheme();
     await loadCategories();
@@ -767,6 +759,7 @@ async function init() {
     
     const bulkPublishBtn = $('#bulkPublishBtn');
     if (bulkPublishBtn) bulkPublishBtn.addEventListener('click', bulkPublish);
+    
     const bulkDeleteBtn = $('#bulkDeleteBtn');
     if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDelete);
     
@@ -788,7 +781,7 @@ async function init() {
         runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
     }
     
-    console.log('TrendyReels initialized (Final Version)!');
+    console.log('TrendyReels initialized (Final Full Version)!');
 }
 
 if (document.readyState === 'loading') {
