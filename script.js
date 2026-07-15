@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript (PART 1 - CORS FIX)
+// TrendyReels - Main JavaScript (PART 1 - FULL LOGIC)
 // ============================================
 
 // Supabase Configuration
@@ -218,7 +218,7 @@ function extractEmbedUrl(embedCode) {
     return embedCode.trim();
 }
 // ============================================
-// TrendyReels - Main JavaScript (PART 2 - CORS FIX)
+// TrendyReels - Main JavaScript (PART 2 - FULL LOGIC)
 // ============================================
 
 // ============================================
@@ -457,7 +457,7 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// 🚀 FIXED: Bot Integration (Direct Worker Call)
+// 🚀 FINAL FIX: Bot Integration (Direct Worker Call)
 // ============================================
 async function runBot(botName, keyword = 'trending') {
     let url = '';
