@@ -449,7 +449,7 @@ function autoDetectCopyright(title, channel) {
 // 🚀 UPDATED: FETCH VIDEOS WITH COPYRIGHT FILTER
 // ============================================
 
-async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
+asyncasync function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
     const YOUTUBE_API_KEY = 'AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4';
@@ -458,7 +458,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        const PEXELS_API_KEY = '563492ad6f91700001000001fd1c593ed5e74e7b85f5fcb265cfc836';
         apiUrl = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
@@ -487,7 +486,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
     if (botName === 'pexels') {
         try {
             const response = await fetch(apiUrl, {
-                headers: { 'Authorization': PEXELS_API_KEY }
+                headers: { 'Authorization': '563492ad6f91700001000001fd1c593ed5e74e7b85f5fcb265cfc836' }
             });
             if (!response.ok) throw new Error('Pexels API error');
             const data = await response.json();
@@ -497,7 +496,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
                 thumbnail: video.image,
                 embed_code: `<video controls src="${video.video_files[0].link}" poster="${video.image}"></video>`,
                 channel: video.user.name,
-                is_copyright_free: true // Pexels تمام ویڈیوز مفت ہیں
+                is_copyright_free: true // Pexels کی تمام ویڈیوز مفت ہیں
             }));
         } catch (error) {
             alert(`❌ Pexels API Error: ${error.message}`);
