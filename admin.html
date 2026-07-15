@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Admin Header -->
     <header class="admin-header">
         <div class="header-left">
             <a href="/" class="logo">
@@ -21,16 +20,13 @@
         </div>
     </header>
 
-    <!-- Admin Navigation -->
     <nav class="admin-nav">
         <button class="admin-tab active" data-tab="videos">📹 Videos</button>
         <button class="admin-tab" data-tab="ads">📢 Ads</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
     </nav>
 
-    <!-- Admin Content -->
     <main class="admin-content">
-        <!-- Videos Tab -->
         <section id="videosTab" class="admin-tab-content active">
             <div class="admin-actions">
                 <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
@@ -52,22 +48,16 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="adminVideoTableBody">
-                        <!-- Rendered by JS -->
-                    </tbody>
+                    <tbody id="adminVideoTableBody"></tbody>
                 </table>
             </div>
         </section>
 
-        <!-- Ads Tab -->
         <section id="adsTab" class="admin-tab-content">
             <h2>Adsterra Ad Manager</h2>
-            <div class="ad-slots-grid" id="adSlotsGrid">
-                <!-- Rendered by JS -->
-            </div>
+            <div class="ad-slots-grid" id="adSlotsGrid"></div>
         </section>
 
-        <!-- Settings Tab -->
         <section id="settingsTab" class="admin-tab-content">
             <h2>Settings</h2>
             <div class="settings-card">
@@ -87,7 +77,6 @@
         </section>
     </main>
 
-    <!-- Add Video Modal -->
     <div id="addVideoModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -95,19 +84,14 @@
             <form id="addVideoForm">
                 <div class="form-group">
                     <label for="videoEmbed">Embed Code (YouTube/Dailymotion)</label>
-                    <textarea id="videoEmbed" rows="4" placeholder='<iframe width="560" height="315" src="https://www.youtube.com/embed/..." frameborder="0" allowfullscreen></iframe>' required></textarea>
+                    <textarea id="videoEmbed" rows="4" required></textarea>
                 </div>
                 <div class="form-group">
                     <label for="videoCategory">Category</label>
-                    <select id="videoCategory" required>
-                        <option value="">Select Category</option>
-                    </select>
+                    <select id="videoCategory" required></select>
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="videoCopyrightFree">
-                        Copyright Free (enable download button)
-                    </label>
+                    <label><input type="checkbox" id="videoCopyrightFree"> Copyright Free</label>
                 </div>
                 <button type="submit" class="btn-primary">Add Video</button>
             </form>
