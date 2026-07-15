@@ -407,7 +407,12 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
 
     if (botName === 'pexels') {
         try {
-            const response = await fetch(apiUrl);
+            // ✅ FINAL FIX: ہیڈرز کے ساتھ fetch کریں
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
             if (!response.ok) throw new Error('Pixabay API error');
             const json = await response.json();
             
@@ -420,9 +425,8 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
                 // ✅ FINAL FIX: Pixabay کا صحیح تھمب نیل لنک
-                thumbnail: video.previewURL || video.image || video.webformatURL,
-                // ✅ FINAL FIX: ویڈیو کے صحیح لنک (بڑا نہ ہو تو چھوٹا استعمال کریں)
-                embed_code: `<video controls src="${video.videos.large.url || video.videos.tiny.url}" poster="${video.previewURL}"></video>`,
+                thumbnail: video.webformatURL || video.previewURL || video.image,
+                embed_code: `<video controls src="${video.videos.large.url || video.videos.tiny.url}" poster="${video.webformatURL || video.previewURL}"></video>`,
                 channel: video.user || 'Pixabay',
                 is_copyright_free: true
             }));
