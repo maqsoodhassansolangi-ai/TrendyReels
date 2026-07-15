@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript (PART 1)
+// TrendyReels - Main JavaScript (PART 1 - CORS FIX)
 // ============================================
 
 // Supabase Configuration
@@ -218,7 +218,7 @@ function extractEmbedUrl(embedCode) {
     return embedCode.trim();
 }
 // ============================================
-// TrendyReels - Main JavaScript (PART 2)
+// TrendyReels - Main JavaScript (PART 2 - CORS FIX)
 // ============================================
 
 // ============================================
@@ -457,20 +457,18 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// Bot Integration - Fetch and Save to Supabase (FINAL LINKS)
+// 🚀 CORS FIX: Bot Bridge (Direct Proxy)
 // ============================================
 async function runBot(botName, keyword = 'trending') {
-    const workerUrls = {
-        youtube: `https://youtube-bot.maqsoodhassansolangi.workers.dev/?q=${keyword}`,
-        pexels: `https://pexels-bot.maqsoodhassansolangi.workers.dev/?q=${keyword}`,
-    };
-    
     try {
-        const response = await fetch(workerUrls[botName]);
+        // براہِ راست Worker کو کال کرنے کی بجائے، ہم اپنی سائٹ کے اندر سے ایک "Bridge" بنائیں گے
+        // یہ طریقہ CORS کے تمام ایررز کو ختم کر دیتا ہے
+        const response = await fetch(`/api/bot-proxy?bot=${botName}&q=${encodeURIComponent(keyword)}`);
+        
+        if (!response.ok) throw new Error('Failed to reach bot');
         const data = await response.json();
         if (!data.success) throw new Error(data.error);
         
-        // Save each video to Supabase
         for (const video of data.videos) {
             await supabase.post('videos', {
                 title: video.title,
@@ -482,7 +480,7 @@ async function runBot(botName, keyword = 'trending') {
             });
         }
         alert(`✅ ${data.videos.length} videos added from ${botName}!`);
-        await loadVideos(); // Reload the grid
+        await loadVideos();
     } catch (error) {
         alert(`❌ Error running ${botName}: ${error.message}`);
     }
