@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="admin-header">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <span class="logo-icon">▶</span>
+                <span class="logo-text">TrendyReels Admin</span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="adminThemeToggle" aria-label="Toggle theme">🌙</button>
+        </div>
+    </header>
+
+    <nav class="admin-nav">
+        <button class="admin-tab active" data-tab="videos">📹 Videos</button>
+        <button class="admin-tab" data-tab="ads">📢 Ads</button>
+        <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
+    </nav>
+
+    <main class="admin-content">
+        <section id="videosTab" class="admin-tab-content active">
+            <div class="admin-actions">
+                <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
+                <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
+                <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
+                <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white;">▶ Run YouTube Bot</button>
+                <button id="runPexelsBot" class="btn-secondary" style="background:#25D366; color:white;">▶ Run Pexels Bot</button>
+            </div>
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Embed</th>
+                            <th>Copyright</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminVideoTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="adsTab" class="admin-tab-content">
+            <h2>Adsterra Ad Manager</h2>
+            <div class="ad-slots-grid" id="adSlotsGrid"></div>
+        </section>
+
+        <section id="settingsTab" class="admin-tab-content">
+            <h2>Settings</h2>
+            <div class="settings-card">
+                <h3>Theme Preference</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="adminThemeSwitch">
+                    <span class="slider"></span>
+                </label>
+                <span>Dark Mode</span>
+            </div>
+            <div class="settings-card">
+                <h3>Site Information</h3>
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Total Videos:</strong> <span id="totalVideosCount">0</span></p>
+                <p><strong>Database:</strong> Supabase (Connected)</p>
+            </div>
+        </section>
+    </main>
+
+    <div id="addVideoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Add New Video</h2>
+            <form id="addVideoForm">
+                <div class="form-group">
+                    <label for="videoEmbed">Embed Code (YouTube/Dailymotion)</label>
+                    <textarea id="videoEmbed" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="videoCategory">Category</label>
+                    <select id="videoCategory" required></select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="videoCopyrightFree"> Copyright Free</label>
+                </div>
+                <button type="submit" class="btn-primary">Add Video</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+                  </html>
