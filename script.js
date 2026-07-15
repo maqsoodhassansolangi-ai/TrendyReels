@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript
+// TrendyReels - Main JavaScript (PART 1)
 // ============================================
 
 // Supabase Configuration
@@ -216,7 +216,10 @@ function extractEmbedUrl(embedCode) {
     const dmMatch = embedCode.match(/src="([^"]+dailymotion\.com\/embed\/[^"]+)"/);
     if (dmMatch) return dmMatch[1];
     return embedCode.trim();
-}
+        }
+// ============================================
+// TrendyReels - Main JavaScript (PART 2)
+// ============================================
 
 // ============================================
 // Video Modal
@@ -454,6 +457,38 @@ function initSecretAdmin() {
 }
 
 // ============================================
+// Bot Integration - Fetch and Save to Supabase
+// ============================================
+async function runBot(botName, keyword = 'trending') {
+    const workerUrls = {
+        youtube: `https://youtube-bot.sansolangi.workers.dev/?q=${keyword}`,
+        pexels: `https://pexels-bot.sansolangi.workers.dev/?q=${keyword}`,
+    };
+    
+    try {
+        const response = await fetch(workerUrls[botName]);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+        
+        // Save each video to Supabase
+        for (const video of data.videos) {
+            await supabase.post('videos', {
+                title: video.title,
+                embed_code: video.embed_code,
+                category: video.category || 'Technology',
+                is_copyright_free: video.is_copyright_free,
+                published: true,
+                created_at: new Date().toISOString()
+            });
+        }
+        alert(`✅ ${data.videos.length} videos added from ${botName}!`);
+        await loadVideos(); // Reload the grid
+    } catch (error) {
+        alert(`❌ Error running ${botName}: ${error.message}`);
+    }
+}
+
+// ============================================
 // Search
 // ============================================
 let searchTimeout = null;
@@ -537,6 +572,23 @@ async function init() {
     if (selectAll) {
         selectAll.addEventListener('change', () => {
             $$('.video-checkbox').forEach(cb => cb.checked = selectAll.checked);
+        });
+    }
+
+    // Bot buttons
+    const runYoutubeBtn = $('#runYoutubeBot');
+    if (runYoutubeBtn) {
+        runYoutubeBtn.addEventListener('click', () => {
+            const keyword = prompt('Enter search keyword for YouTube:', 'cricket');
+            if (keyword) runBot('youtube', keyword);
+        });
+    }
+
+    const runPexelsBtn = $('#runPexelsBot');
+    if (runPexelsBtn) {
+        runPexelsBtn.addEventListener('click', () => {
+            const keyword = prompt('Enter search keyword for Pexels:', 'nature');
+            if (keyword) runBot('pexels', keyword);
         });
     }
     
