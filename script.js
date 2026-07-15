@@ -458,7 +458,7 @@ function autoDetectCopyright(title, channel) {
     return true;
 }
 
-// --- MODULE 9: FETCH VIDEOS (UPDATED WITH PIXABAY) ---
+// --- MODULE 9: FETCH VIDEOS (UPDATED WITH PIXABAY & THUMBNAIL FIX) ---
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -468,7 +468,7 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        // UPDATED: Pixabay API (No key needed - I added a default one)
+        // آپ کی نئی Pixabay API کلید
         apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
@@ -508,10 +508,11 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
             return json.hits.map(video => ({
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
-                thumbnail: video.previewURL || video.webformatURL,
-                embed_code: `<video controls src="${video.videos.large.url}" poster="${video.previewURL}"></video>`,
+                // ✅ FIXED: صحیح تھمب نیل لنک
+                thumbnail: video.webformatURL || video.previewURL || video.userImageURL,
+                embed_code: `<video controls src="${video.videos.large.url}" poster="${video.webformatURL}"></video>`,
                 channel: video.user || 'Pixabay',
-                is_copyright_free: true // Pixabay تمام ویڈیوز مفت ہیں
+                is_copyright_free: true
             }));
         } catch (error) {
             alert(`❌ Pixabay API Error: ${error.message}`);
