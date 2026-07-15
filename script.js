@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript (V2.1 - PART 1)
+// TrendyReels - Main JavaScript (FINAL FIXED VERSION - PART 1)
 // ============================================
 
 // Supabase Configuration
@@ -187,12 +187,24 @@ function renderVideos() {
     });
 }
 
+// ============================================
+// ✅ FIXED: GET THUMBNAIL (NOW SUPPORTS PIXABAY)
+// ============================================
 function getThumbnail(embedCode) {
     if (!embedCode) return '';
+    
+    // 1. YouTube
     const ytMatch = embedCode.match(/(?:youtube\.com\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+    
+    // 2. Dailymotion
     const dmMatch = embedCode.match(/dailymotion\.com\/embed\/video\/([a-zA-Z0-9]+)/);
     if (dmMatch) return `https://www.dailymotion.com/thumbnail/video/${dmMatch[1]}`;
+    
+    // 3. Pixabay / HTML5 Video Poster
+    const posterMatch = embedCode.match(/poster="([^"]+)"/);
+    if (posterMatch) return posterMatch[1];
+    
     return '';
 }
 
@@ -204,6 +216,9 @@ function extractEmbedUrl(embedCode) {
     return embedCode.trim();
 }
 
+// ============================================
+// ✅ FIXED: OPEN VIDEO MODAL (NOW SUPPORTS PIXABAY NATIVE VIDEO)
+// ============================================
 function openVideoModal(video) {
     state.currentVideo = video;
     const modal = $('#videoModal');
@@ -212,18 +227,45 @@ function openVideoModal(video) {
     const downloadBtn = $('#downloadBtn');
     const shareBtn = $('#shareBtn');
     
-    const embedUrl = extractEmbedUrl(video.embed_code);
-    player.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+    // چیک کریں کہ کیا ویڈیو Pixabay کی نیٹیو ویڈیو ہے
+    if (video.embed_code.trim().startsWith('<video')) {
+        // Pixabay ویڈیو کو براہ راست بغیر iframe کے چلائیں
+        player.innerHTML = video.embed_code;
+        
+        // ویڈیو پلیئر کو خوبصورت اور ریسپانسیو بنائیں
+        const nativeVideo = player.querySelector('video');
+        if (nativeVideo) {
+            nativeVideo.style.width = '100%';
+            nativeVideo.style.aspectRatio = '16/9';
+            nativeVideo.style.borderRadius = '8px';
+            nativeVideo.style.outline = 'none';
+        }
+    } else {
+        // YouTube یا Dailymotion کے لیے پرانا iframe طریقہ
+        const embedUrl = extractEmbedUrl(video.embed_code);
+        player.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+    }
+    
     title.textContent = video.title || 'Untitled Video';
     
+    // ڈاؤن لوڈ بٹن کی لاجک
     if (video.is_copyright_free) {
         downloadBtn.style.display = 'inline-block';
         downloadBtn.onclick = () => {
-            const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-            if (ytMatch) {
-                window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+            if (video.embed_code.trim().startsWith('<video')) {
+                // Pixabay ویڈیو سے براہ راست mp4 لنک نکال کر کھولیں
+                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
+                if (srcMatch) {
+                    window.open(srcMatch[1], '_blank');
+                }
             } else {
-                window.open(embedUrl, '_blank');
+                const embedUrl = extractEmbedUrl(video.embed_code);
+                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                if (ytMatch) {
+                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                } else {
+                    window.open(embedUrl, '_blank');
+                }
             }
         };
     } else {
@@ -366,11 +408,13 @@ function autoDetectCopyright(title, channel) {
         }
     }
     return true;
-        }
+}
+
 // ============================================
-// TrendyReels - Main JavaScript (V2.1 - PART 2)
+// TrendyReels - Main JavaScript (FINAL FIXED VERSION - PART 2)
 // ============================================
-// --- MODULE 9: FETCH VIDEOS (FINAL FIXED VERSION) ---
+
+// --- Fetch Videos ---
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -407,11 +451,8 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
 
     if (botName === 'pexels') {
         try {
-            // ✅ FINAL FIX: ہیڈرز کے ساتھ fetch کریں
             const response = await fetch(apiUrl, {
-                headers: {
-                    'Accept': 'application/json'
-                }
+                headers: { 'Accept': 'application/json' }
             });
             if (!response.ok) throw new Error('Pixabay API error');
             const json = await response.json();
@@ -424,7 +465,6 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
             return json.hits.map(video => ({
                 id: video.id,
                 title: video.tags || 'Pixabay Video',
-                // ✅ FINAL FIX: Pixabay کا صحیح تھمب نیل لنک
                 thumbnail: video.webformatURL || video.previewURL || video.image,
                 embed_code: `<video controls src="${video.videos.large.url || video.videos.tiny.url}" poster="${video.webformatURL || video.previewURL}"></video>`,
                 channel: video.user || 'Pixabay',
@@ -817,7 +857,7 @@ async function init() {
         runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
     }
     
-    console.log('TrendyReels V2.1 initialized!');
+    console.log('TrendyReels Final Fixed Version initialized!');
 }
 
 if (document.readyState === 'loading') {
