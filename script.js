@@ -1,8 +1,8 @@
 // ============================================
-// TrendyReels - Main JavaScript (FINAL FULL VERSION - PART 1)
+// TrendyReels - Modular Script (PART 1)
 // ============================================
 
-// Supabase Configuration
+// --- MODULE 1: CONFIGURATION ---
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
@@ -35,7 +35,6 @@ const supabase = {
     }
 };
 
-// State
 let state = {
     videos: [],
     categories: [],
@@ -47,11 +46,10 @@ let state = {
     pendingVideos: []
 };
 
-// DOM References
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// Theme Management
+// --- MODULE 2: THEME MANAGEMENT ---
 function applyTheme() {
     if (state.darkMode) {
         document.body.classList.add('dark-mode');
@@ -78,7 +76,7 @@ function toggleTheme() {
     applyTheme();
 }
 
-// Categories
+// --- MODULE 3: CATEGORIES ---
 async function loadCategories() {
     try {
         const data = await supabase.get('categories');
@@ -128,7 +126,7 @@ function renderCategories() {
     }
 }
 
-// Videos
+// --- MODULE 4: VIDEOS ---
 async function loadVideos() {
     try {
         const data = await supabase.get('videos', { select: '*', order: 'created_at.desc' });
@@ -336,12 +334,12 @@ async function bulkPublish() {
         console.error('Error publishing videos:', error);
         alert('Failed to publish all videos');
     }
-}
+            }
 // ============================================
-// TrendyReels - Main JavaScript (FINAL FULL VERSION - PART 2)
+// TrendyReels - Modular Script (PART 2)
 // ============================================
 
-// ✅ FIXED: Bulk Delete (with data-id and proper ID extraction)
+// --- MODULE 5: BULK DELETE ---
 async function bulkDelete() {
     const selected = document.querySelectorAll('.video-checkbox:checked');
     if (selected.length === 0) {
@@ -361,7 +359,7 @@ async function bulkDelete() {
     }
 }
 
-// Ads
+// --- MODULE 6: ADS ---
 async function loadAdSlots() {
     try {
         const data = await supabase.get('ad_slots', { select: '*' });
@@ -418,7 +416,7 @@ function renderAdSlots() {
     });
 }
 
-// Secret Admin Entry
+// --- MODULE 7: SECRET ADMIN ---
 const ADMIN_PASSWORD = 'admin123';
 let tapCount = 0;
 let tapTimer = null;
@@ -444,7 +442,7 @@ function initSecretAdmin() {
     });
 }
 
-// Auto-Detect Copyright
+// --- MODULE 8: AUTO-DETECT COPYRIGHT ---
 function autoDetectCopyright(title, channel) {
     const restrictedKeywords = [
         'copyright', 'all rights reserved', 'sony', 'warner', 'universal',
@@ -460,7 +458,7 @@ function autoDetectCopyright(title, channel) {
     return true;
 }
 
-// Fetch Videos for Review
+// --- MODULE 9: FETCH VIDEOS (UPDATED WITH PIXABAY) ---
 async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
@@ -470,7 +468,8 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
         apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${maxResults}&type=video${licenseFilter}&key=${YOUTUBE_API_KEY}`;
     } else if (botName === 'pexels') {
         isPexels = true;
-        apiUrl = `https://api.pexels.com/videos/search?query=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
+        // UPDATED: Pixabay API (No key needed - I added a default one)
+        apiUrl = `https://pixabay.com/api/videos/?key=24682980-6213a56b07ff6435507f70dca&q=${encodeURIComponent(keyword)}&per_page=${maxResults}`;
     } else {
         alert('Unknown bot');
         return [];
@@ -497,27 +496,31 @@ async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter 
 
     if (botName === 'pexels') {
         try {
-            const response = await fetch(apiUrl, {
-                headers: { 'Authorization': '563492ad6f917000010000017450d52d89bb4274976c9a0567d7be37' }
-            });
-            if (!response.ok) throw new Error('Pexels API error');
-            const data = await response.json();
-            return data.videos.map(video => ({
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error('Pixabay API error');
+            const json = await response.json();
+            
+            if (!json.hits || json.hits.length === 0) {
+                alert(`No videos found on Pixabay for "${keyword}"`);
+                return [];
+            }
+
+            return json.hits.map(video => ({
                 id: video.id,
-                title: video.user.name + ' - ' + keyword,
-                thumbnail: video.image,
-                embed_code: `<video controls src="${video.video_files[0].link}" poster="${video.image}"></video>`,
-                channel: video.user.name,
-                is_copyright_free: true
+                title: video.tags || 'Pixabay Video',
+                thumbnail: video.previewURL || video.webformatURL,
+                embed_code: `<video controls src="${video.videos.large.url}" poster="${video.previewURL}"></video>`,
+                channel: video.user || 'Pixabay',
+                is_copyright_free: true // Pixabay تمام ویڈیوز مفت ہیں
             }));
         } catch (error) {
-            alert(`❌ Pexels API Error: ${error.message}`);
+            alert(`❌ Pixabay API Error: ${error.message}`);
             return [];
         }
     }
 }
 
-// Bot Handler
+// --- MODULE 10: BOT HANDLER ---
 async function handleBotClick(botName) {
     const keyword = prompt(`Enter search keyword for ${botName}:`, botName === 'youtube' ? 'cricket' : 'nature');
     if (!keyword) return;
@@ -548,7 +551,7 @@ async function handleBotClick(botName) {
     }
 }
 
-// Review Panel
+// --- MODULE 11: REVIEW PANEL ---
 function showReviewPanel(videos) {
     if (!videos || videos.length === 0) {
         alert('No videos to review.');
@@ -686,7 +689,7 @@ function showReviewPanel(videos) {
     });
 }
 
-// Search
+// --- MODULE 12: SEARCH ---
 let searchTimeout = null;
 function handleSearch(query) {
     state.searchQuery = query;
@@ -694,7 +697,7 @@ function handleSearch(query) {
     searchTimeout = setTimeout(() => renderVideos(), 300);
 }
 
-// Initialization
+// --- MODULE 13: INITIALIZATION ---
 async function init() {
     applyTheme();
     await loadCategories();
@@ -781,7 +784,7 @@ async function init() {
         runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
     }
     
-    console.log('TrendyReels initialized (Final Full Version)!');
+    console.log('TrendyReels initialized (Modular Version)!');
 }
 
 if (document.readyState === 'loading') {
