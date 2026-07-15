@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - Main JavaScript (PART 1 - FULL LOGIC)
+// TrendyReels - Main JavaScript (PART 1 of 2)
 // ============================================
 
 // Supabase Configuration
@@ -216,9 +216,9 @@ function extractEmbedUrl(embedCode) {
     const dmMatch = embedCode.match(/src="([^"]+dailymotion\.com\/embed\/[^"]+)"/);
     if (dmMatch) return dmMatch[1];
     return embedCode.trim();
-}
+                                   }
 // ============================================
-// TrendyReels - Main JavaScript (PART 2 - FULL LOGIC)
+// TrendyReels - Main JavaScript (PART 2 of 2)
 // ============================================
 
 // ============================================
@@ -457,27 +457,18 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// 🚀 FINAL FIX: Bot Integration (Direct Worker Call)
+// 🚀 ULTIMATE FIX: Built-in Proxy (No CORS issues)
 // ============================================
 async function runBot(botName, keyword = 'trending') {
-    let url = '';
-    if (botName === 'youtube') {
-        url = `https://youtube-bot.maqsoodhassansolangi.workers.dev/?q=${encodeURIComponent(keyword)}`;
-    } else if (botName === 'pexels') {
-        url = `https://pexels-bot.maqsoodhassansolangi.workers.dev/?q=${encodeURIComponent(keyword)}`;
-    } else {
-        alert('Unknown bot');
-        return;
-    }
-
+    const proxyUrl = `/api/bot-proxy?bot=${botName}&q=${encodeURIComponent(keyword)}`;
+    
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to reach bot');
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Bot unreachable');
         
         const data = await response.json();
-        if (!data.success) throw new Error(data.error);
+        if (!data.success) throw new Error(data.error || 'Bot returned error');
         
-        // Save each video to Supabase
         for (const video of data.videos) {
             await supabase.post('videos', {
                 title: video.title,
