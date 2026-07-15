@@ -448,8 +448,7 @@ function autoDetectCopyright(title, channel) {
 // ============================================
 // 🚀 UPDATED: FETCH VIDEOS WITH COPYRIGHT FILTER
 // ============================================
-
-asyncasync function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
+async function fetchVideosForReview(botName, keyword, maxResults, licenseFilter = '') {
     let apiUrl = '';
     let isPexels = false;
     const YOUTUBE_API_KEY = 'AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4';
