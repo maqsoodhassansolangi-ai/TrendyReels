@@ -431,7 +431,9 @@ function initSecretAdmin() {
             }
         }
     });
-}
+            }
+
+
 // ============================================
 // 🚀 FINAL: SMART AUTO-DETECT LOGIC
 // ============================================
@@ -711,4 +713,88 @@ async function init() {
     const searchInput = $('#searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
-        $('#searchBtn').addEventListener('click', ()
+        $('#searchBtn').addEventListener('click', () => handleSearch(searchInput.value));
+    }
+    
+    const themeToggle = $('#themeToggle');
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    const adminThemeToggle = $('#adminThemeToggle');
+    if (adminThemeToggle) adminThemeToggle.addEventListener('click', toggleTheme);
+    const adminThemeSwitch = $('#adminThemeSwitch');
+    if (adminThemeSwitch) adminThemeSwitch.addEventListener('change', toggleTheme);
+    
+    const modal = $('#videoModal');
+    if (modal) {
+        $('.close-modal').addEventListener('click', closeVideoModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeVideoModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeVideoModal();
+        });
+    }
+    
+    $$('.admin-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            $$('.admin-tab').forEach(t => t.classList.remove('active'));
+            $$('.admin-tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            $(`#${tab.dataset.tab}Tab`).classList.add('active');
+        });
+    });
+    
+    const addVideoBtn = $('#addVideoBtn');
+    const addModal = $('#addVideoModal');
+    if (addVideoBtn && addModal) {
+        addVideoBtn.addEventListener('click', () => addModal.classList.add('active'));
+        addModal.querySelector('.close-modal').addEventListener('click', () => addModal.classList.remove('active'));
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) addModal.classList.remove('active');
+        });
+        
+        $('#addVideoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const success = await addVideo(formData);
+            if (success) {
+                addModal.classList.remove('active');
+                e.target.reset();
+            } else {
+                alert('Failed to add video. Check console for details.');
+            }
+        });
+    }
+    
+    const bulkPublishBtn = $('#bulkPublishBtn');
+    if (bulkPublishBtn) bulkPublishBtn.addEventListener('click', bulkPublish);
+    const bulkDeleteBtn = $('#bulkDeleteBtn');
+    if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDelete);
+    
+    const selectAll = $('#selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', () => {
+            $$('.video-checkbox').forEach(cb => cb.checked = selectAll.checked);
+        });
+    }
+
+    // Bot buttons
+    const runYoutubeBtn = $('#runYoutubeBot');
+    if (runYoutubeBtn) {
+        runYoutubeBtn.addEventListener('click', () => handleBotClick('youtube'));
+    }
+
+    const runPexelsBtn = $('#runPexelsBot');
+    if (runPexelsBtn) {
+        runPexelsBtn.addEventListener('click', () => handleBotClick('pexels'));
+    }
+    
+    console.log('TrendyReels initialized (Final Version)!');
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+window.deleteVideo = deleteVideo;
