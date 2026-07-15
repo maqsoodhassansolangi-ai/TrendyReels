@@ -6,7 +6,7 @@
 const SUPABASE_URL = 'https://gfhngvzsqyenbtqurjb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_1-EbjriSQiU2J7sWTm8KvQ_XUWooXO4';
 
-// Supabase Client (simple fetch wrapper)
+// Supabase Client
 const supabase = {
     async query(endpoint, options = {}) {
         const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
@@ -60,14 +60,20 @@ const $$ = (sel) => document.querySelectorAll(sel);
 function applyTheme() {
     if (state.darkMode) {
         document.body.classList.add('dark-mode');
-        $('#themeToggle').textContent = '☀️';
-        $('#adminThemeToggle').textContent = '☀️';
-        if ($('#adminThemeSwitch')) $('#adminThemeSwitch').checked = true;
+        const themeToggle = $('#themeToggle');
+        if (themeToggle) themeToggle.textContent = '☀️';
+        const adminThemeToggle = $('#adminThemeToggle');
+        if (adminThemeToggle) adminThemeToggle.textContent = '☀️';
+        const adminThemeSwitch = $('#adminThemeSwitch');
+        if (adminThemeSwitch) adminThemeSwitch.checked = true;
     } else {
         document.body.classList.remove('dark-mode');
-        $('#themeToggle').textContent = '🌙';
-        $('#adminThemeToggle').textContent = '🌙';
-        if ($('#adminThemeSwitch')) $('#adminThemeSwitch').checked = false;
+        const themeToggle = $('#themeToggle');
+        if (themeToggle) themeToggle.textContent = '🌙';
+        const adminThemeToggle = $('#adminThemeToggle');
+        if (adminThemeToggle) adminThemeToggle.textContent = '🌙';
+        const adminThemeSwitch = $('#adminThemeSwitch');
+        if (adminThemeSwitch) adminThemeSwitch.checked = false;
     }
     localStorage.setItem('trendyreels-theme', state.darkMode ? 'dark' : 'light');
 }
@@ -96,7 +102,6 @@ function renderCategories() {
     const container = document.querySelector('.category-scroll');
     if (!container) return;
     
-    // Keep "All" button, remove others
     const allBtn = container.querySelector('.category-pill[data-category="all"]');
     container.innerHTML = '';
     container.appendChild(allBtn);
@@ -109,7 +114,6 @@ function renderCategories() {
         container.appendChild(btn);
     });
     
-    // Add click handlers
     container.querySelectorAll('.category-pill').forEach(btn => {
         btn.addEventListener('click', () => {
             container.querySelectorAll('.category-pill').forEach(b => b.classList.remove('active'));
@@ -119,7 +123,6 @@ function renderCategories() {
         });
     });
     
-    // Populate admin category select
     const select = $('#videoCategory');
     if (select) {
         select.innerHTML = '<option value="">Select Category</option>';
@@ -154,14 +157,12 @@ function renderVideos() {
     
     let filtered = state.videos;
     
-    // Category filter
     if (state.currentCategory !== 'all') {
         filtered = filtered.filter(v => 
             v.category && v.category.toLowerCase() === state.currentCategory
         );
     }
     
-    // Search filter
     if (state.searchQuery.trim()) {
         const q = state.searchQuery.toLowerCase();
         filtered = filtered.filter(v => 
@@ -191,7 +192,6 @@ function renderVideos() {
         </div>
     `).join('');
     
-    // Add click listeners
     grid.querySelectorAll('.video-card').forEach(card => {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
@@ -203,10 +203,8 @@ function renderVideos() {
 
 function getThumbnail(embedCode) {
     if (!embedCode) return '';
-    // YouTube
     const ytMatch = embedCode.match(/(?:youtube\.com\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
-    // Dailymotion
     const dmMatch = embedCode.match(/dailymotion\.com\/embed\/video\/([a-zA-Z0-9]+)/);
     if (dmMatch) return `https://www.dailymotion.com/thumbnail/video/${dmMatch[1]}`;
     return '';
@@ -235,11 +233,9 @@ function openVideoModal(video) {
     player.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
     title.textContent = video.title || 'Untitled Video';
     
-    // Download button (only for copyright-free)
     if (video.is_copyright_free) {
         downloadBtn.style.display = 'inline-block';
         downloadBtn.onclick = () => {
-            // For YouTube, try to get direct download link, otherwise open in new tab
             const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
             if (ytMatch) {
                 window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
@@ -251,7 +247,6 @@ function openVideoModal(video) {
         downloadBtn.style.display = 'none';
     }
     
-    // Share button
     shareBtn.onclick = () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
@@ -292,7 +287,6 @@ function renderAdminVideos() {
         </tr>
     `).join('');
     
-    // Update total count
     const countEl = $('#totalVideosCount');
     if (countEl) countEl.textContent = state.videos.length;
 }
@@ -314,12 +308,10 @@ async function addVideo(formData) {
         const category = formData.get('category');
         const isCopyrightFree = formData.get('copyrightFree') === 'on';
         
-        // Auto-detect title from embed
         let title = 'Video';
         const ytMatch = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
         if (ytMatch) {
             try {
-                // Try to get video title from YouTube API
                 const resp = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${ytMatch[1]}&part=snippet&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`);
                 const data = await resp.json();
                 if (data.items && data.items[0]) {
@@ -351,9 +343,8 @@ async function addVideo(formData) {
 async function bulkPublish() {
     if (!confirm('Publish all videos?')) return;
     try {
-        const updates = state.videos.map(v => ({ id: v.id, published: true }));
-        for (const update of updates) {
-            await supabase.patch('videos', { published: true }, update.id);
+        for (const video of state.videos) {
+            await supabase.patch('videos', { published: true }, video.id);
         }
         await loadVideos();
     } catch (error) {
@@ -410,7 +401,6 @@ function renderAdSlots() {
         </div>
     `).join('');
     
-    // Add save handlers
     grid.querySelectorAll('.save-ad-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const card = btn.closest('.ad-slot-card');
@@ -419,7 +409,6 @@ function renderAdSlots() {
             const code = card.querySelector('.ad-code').value;
             
             try {
-                // Check if slot exists
                 const existing = state.adSlots.find(s => s.name === name);
                 if (existing) {
                     await supabase.patch('ad_slots', { enabled, code }, existing.id);
@@ -437,6 +426,34 @@ function renderAdSlots() {
 }
 
 // ============================================
+// Secret Admin Entry (Mobile Friendly - Tap 5 times)
+// ============================================
+const ADMIN_PASSWORD = 'admin123';
+let tapCount = 0;
+let tapTimer = null;
+
+function initSecretAdmin() {
+    const secretBtn = $('#secretAdminBtn');
+    if (!secretBtn) return;
+    
+    secretBtn.addEventListener('click', () => {
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
+        
+        if (tapCount === 5) {
+            const password = prompt('🔐 Enter Admin Password:');
+            if (password === ADMIN_PASSWORD) {
+                window.location.href = 'admin.html';
+            } else {
+                alert('❌ Wrong password!');
+                tapCount = 0;
+            }
+        }
+    });
+}
+
+// ============================================
 // Search
 // ============================================
 let searchTimeout = null;
@@ -450,15 +467,12 @@ function handleSearch(query) {
 // Initialization
 // ============================================
 async function init() {
-    // Apply theme
     applyTheme();
-    
-    // Load data
     await loadCategories();
     await loadVideos();
     await loadAdSlots();
+    initSecretAdmin();
     
-    // Event listeners
     const searchInput = $('#searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
@@ -467,14 +481,11 @@ async function init() {
     
     const themeToggle = $('#themeToggle');
     if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-    
     const adminThemeToggle = $('#adminThemeToggle');
     if (adminThemeToggle) adminThemeToggle.addEventListener('click', toggleTheme);
-    
     const adminThemeSwitch = $('#adminThemeSwitch');
     if (adminThemeSwitch) adminThemeSwitch.addEventListener('change', toggleTheme);
     
-    // Modal
     const modal = $('#videoModal');
     if (modal) {
         $('.close-modal').addEventListener('click', closeVideoModal);
@@ -486,7 +497,6 @@ async function init() {
         });
     }
     
-    // Admin tabs
     $$('.admin-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             $$('.admin-tab').forEach(t => t.classList.remove('active'));
@@ -496,7 +506,6 @@ async function init() {
         });
     });
     
-    // Admin add video
     const addVideoBtn = $('#addVideoBtn');
     const addModal = $('#addVideoModal');
     if (addVideoBtn && addModal) {
@@ -519,14 +528,11 @@ async function init() {
         });
     }
     
-    // Bulk actions
     const bulkPublishBtn = $('#bulkPublishBtn');
     if (bulkPublishBtn) bulkPublishBtn.addEventListener('click', bulkPublish);
-    
     const bulkDeleteBtn = $('#bulkDeleteBtn');
     if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', bulkDelete);
     
-    // Select all
     const selectAll = $('#selectAll');
     if (selectAll) {
         selectAll.addEventListener('change', () => {
@@ -534,24 +540,13 @@ async function init() {
         });
     }
     
-    // Back to site
-    const backLink = document.querySelector('.back-to-site');
-    if (backLink) {
-        backLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = '/';
-        });
-    }
-    
     console.log('TrendyReels initialized!');
 }
 
-// Wait for DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
 
-// Expose functions globally for inline handlers
 window.deleteVideo = deleteVideo;
