@@ -216,7 +216,7 @@ function extractEmbedUrl(embedCode) {
     const dmMatch = embedCode.match(/src="([^"]+dailymotion\.com\/embed\/[^"]+)"/);
     if (dmMatch) return dmMatch[1];
     return embedCode.trim();
-        }
+}
 // ============================================
 // TrendyReels - Main JavaScript (PART 2)
 // ============================================
@@ -457,12 +457,12 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// Bot Integration - Fetch and Save to Supabase
+// Bot Integration - Fetch and Save to Supabase (FINAL LINKS)
 // ============================================
 async function runBot(botName, keyword = 'trending') {
     const workerUrls = {
-        youtube: `https://youtube-bot.sansolangi.workers.dev/?q=${keyword}`,
-        pexels: `https://pexels-bot.sansolangi.workers.dev/?q=${keyword}`,
+        youtube: `https://youtube-bot.maqsoodhassansolangi.workers.dev/?q=${keyword}`,
+        pexels: `https://pexels-bot.maqsoodhassansolangi.workers.dev/?q=${keyword}`,
     };
     
     try {
