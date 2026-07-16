@@ -5,33 +5,25 @@
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
-const supabase = {
-    async query(endpoint, options = {}) {
-        const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
-        const headers = {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation',
-            ...options.headers
-        };
-        const response = await fetch(url, { ...options, headers });
-        if (!response.ok) throw new Error(`Supabase error: ${response.status}`);
-        return response.json();
-    },
-    async get(endpoint, params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return this.query(`${endpoint}?${query}`);
-    },
-    async post(endpoint, data) {
-        return this.query(endpoint, { method: 'POST', body: JSON.stringify(data) });
-    },
-    async patch(endpoint, data, id) {
-        return this.query(`${endpoint}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-    },
-    async delete(endpoint, id) {
-        return this.query(`${endpoint}?id=eq.${id}`, { method: 'DELETE' });
-    }
+const supabase = supabaseClient ? supabaseClient : {
+    from: (table) => ({
+        upsert: async (data, options) => {
+            const url = `${SUPABASE_URL}/rest/v1/${table}`;
+            const headers = {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            };
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`Supabase error: ${response.status}`);
+            return { data: await response.json(), error: null };
+        }
+    })
 };
 
 let state = {
