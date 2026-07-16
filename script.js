@@ -595,33 +595,6 @@ function initSecretAdmin() {
 }
 
 // ============================================
-// TrendyReels - V3.4.1 (5 PARTS - 400 LINES MAX) - PART 3
-// ============================================
-
-function loadPapaParse() {
-    return new Promise((resolve) => {
-        if (window.Papa) { resolve(); return; }
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-        script.onload = () => resolve();
-        document.head.appendChild(script);
-    });
-}
-
-async function ensureCategory(categoryName) {
-    if (!categoryName) return 'General';
-    try {
-        const existing = await supabase.get('categories', { name: categoryName });
-        if (existing && existing.length > 0) return existing[0].name;
-        const newCat = await supabase.post('categories', { name: categoryName });
-        return newCat[0]?.name || 'General';
-    } catch (error) {
-        console.error('Error ensuring category:', error);
-        return 'General';
-    }
-}
-
-// ============================================
 // 🚀 NEW: AI-POWERED SMART PARSER
 // یہ لاجک کسی بھی فارمیٹ کو خود بخود پہچان لے گی
 // ============================================
@@ -632,8 +605,8 @@ async function processVideoData(videoData) {
     // تمام کالمز کو لوپ کریں اور خود بخود URL پہچانیں
     for (const [key, value] of Object.entries(videoData)) {
         const keyLower = key.toLowerCase();
-        // اگر کوئی ویلیو http سے شروع ہو تو اسے URL مان لیں
-        if (value && typeof value === 'string' && value.trim().startsWith('http')) {
+        // اگر کوئی ویلیو http سے شروع ہو تو اسے URL مان لیں (خالی اسپیس ہٹا کر)
+        if (value && typeof value === 'string' && value.trim().replace(/\s/g, '').startsWith('http')) {
             url = value.trim();
         }
         // Title ڈھونڈیں
@@ -646,10 +619,10 @@ async function processVideoData(videoData) {
         }
     }
 
-    // اگر URL نہیں ملا تو چیک کریں کہ کیا Embed Code ہے
+    // اگر URL نہیں ملا تو چیک کریں کہ کیا Embed Code ہے (خالی اسپیس ہٹا کر)
     if (!url) {
         for (const value of Object.values(videoData)) {
-            if (typeof value === 'string' && (value.trim().startsWith('<iframe') || value.trim().startsWith('<video'))) {
+            if (typeof value === 'string' && (value.trim().replace(/\s/g, '').startsWith('<iframe') || value.trim().replace(/\s/g, '').startsWith('<video'))) {
                 url = value.trim();
                 break;
             }
