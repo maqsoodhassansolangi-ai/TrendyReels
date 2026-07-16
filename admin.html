@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>Admin Panel - V3.3</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 </head>
@@ -19,28 +19,28 @@
             <button id="adminThemeToggle" aria-label="Toggle theme">🌙</button>
         </div>
     </header>
+
     <nav class="admin-nav">
         <button class="admin-tab active" data-tab="videos">📹 Videos</button>
         <button class="admin-tab" data-tab="ads">📢 Ads</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
     </nav>
+
     <main class="admin-content">
         <section id="videosTab" class="admin-tab-content active">
             <div class="admin-actions">
                 <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
                 <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
                 <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
+                
+                <!-- 3 Bot Buttons -->
                 <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
                     <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white; flex:1; min-width:100px;">▶ YouTube</button>
                     <button id="runPixabayBot" class="btn-secondary" style="background:#25D366; color:white; flex:1; min-width:100px;">▶ Pixabay</button>
-                    <button id="runTikTokBot" class="btn-secondary" style="background:#ff0050; color:white; flex:1; min-width:100px;">▶ TikTok</button>
-                    <button id="runInstagramBot" class="btn-secondary" style="background:#c13584; color:white; flex:1; min-width:100px;">▶ Instagram</button>
-                    <button id="runVimeoBot" class="btn-secondary" style="background:#1ab7ea; color:white; flex:1; min-width:100px;">▶ Vimeo</button>
-                    <button id="runRedditBot" class="btn-secondary" style="background:#ff4500; color:white; flex:1; min-width:100px;">▶ Reddit</button>
-                    <button id="runTwitterBot" class="btn-secondary" style="background:#1da1f2; color:white; flex:1; min-width:100px;">▶ X (Twitter)</button>
                     <button id="runDailymotionBot" class="btn-secondary" style="background:#0066ff; color:white; flex:1; min-width:100px;">▶ Dailymotion</button>
                 </div>
             </div>
+            
             <div class="admin-table-wrapper">
                 <table class="admin-table">
                     <thead>
@@ -50,10 +50,12 @@
                 </table>
             </div>
         </section>
+
         <section id="adsTab" class="admin-tab-content">
             <h2>Adsterra Ad Manager</h2>
             <div class="ad-slots-grid" id="adSlotsGrid"></div>
         </section>
+
         <section id="settingsTab" class="admin-tab-content">
             <h2>Settings</h2>
             <div class="settings-card">
@@ -69,6 +71,7 @@
             </div>
         </section>
     </main>
+
     <div id="addVideoModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -89,14 +92,7 @@
             </form>
         </div>
     </div>
+
     <script src="script.js"></script>
-    <head>
-    <!-- آپ کے پہلے سے موجود ٹیگز (title, meta, css وغیرہ) -->
-    
-    <!-- ایروڈا کے اسکرپٹس یہاں پیسٹ کریں -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
-    </head>
-    
 </body>
 </html>
