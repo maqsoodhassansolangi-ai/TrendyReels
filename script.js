@@ -1,7 +1,8 @@
 // ============================================
-// TrendyReels - V2.9 (8 Bots Final RapidAPI) - PART 1
+// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 1
 // ============================================
 
+// Supabase Configuration
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
@@ -301,10 +302,10 @@ function autoDetectCopyright(title, channel) {
         if (text.includes(keyword)) return true;
     }
     return false;
-}
+            }
 
 // ============================================
-// TrendyReels - V2.9 (8 Bots Final RapidAPI) - PART 2
+// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 2
 // ============================================
 
 // --- YouTube Bot ---
@@ -387,10 +388,10 @@ async function runDailymotionBot() {
 }
 
 // ============================================
-// 🚀 RAPIDAPI BOTS (TikTok, Instagram, X)
+// 🚀 RAPIDAPI BOTS (FIXED HEADERS)
 // ============================================
 
-// --- TikTok Bot (RapidAPI) ---
+// --- TikTok Bot (RapidAPI - Fixed) ---
 async function runTikTokBot() {
     const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
@@ -423,7 +424,7 @@ async function runTikTokBot() {
     } catch (error) { alert(`❌ TikTok Error: ${error.message}`); }
 }
 
-// --- Instagram Bot (RapidAPI) ---
+// --- Instagram Bot (RapidAPI - Fixed) ---
 async function runInstagramBot() {
     const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
@@ -456,7 +457,7 @@ async function runInstagramBot() {
     } catch (error) { alert(`❌ Instagram Error: ${error.message}`); }
 }
 
-// --- X (Twitter) Bot (RapidAPI) ---
+// --- X (Twitter) Bot (RapidAPI - Fixed) ---
 async function runTwitterBot() {
     const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
@@ -484,10 +485,9 @@ async function runTwitterBot() {
         if (videos.length > 0) showReviewPanel(videos, categoryInput);
         else alert('⚠️ No videos found on X.');
     } catch (error) { alert(`❌ X Error: ${error.message}`); }
-}
-
+            }
 // ============================================
-// TrendyReels - V2.9 (8 Bots Final RapidAPI) - PART 3
+// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 3
 // ============================================
 
 // --- Vimeo Bot (Scraping) ---
@@ -521,7 +521,7 @@ async function runVimeoBot() {
     } catch (error) { alert(`❌ Vimeo Error: ${error.message}`); }
 }
 
-// --- Reddit Bot (Scraping) ---
+// --- Reddit Bot (JSON API) ---
 async function runRedditBot() {
     const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
@@ -811,7 +811,7 @@ async function init() {
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
-    console.log('TrendyReels V2.9 (8 Bots Final RapidAPI) initialized!');
+    console.log('TrendyReels V3.1 (8 Bots Final RapidAPI Fixed) initialized!');
 }
 
 if (document.readyState === 'loading') {
