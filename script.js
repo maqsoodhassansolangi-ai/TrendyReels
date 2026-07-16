@@ -6,26 +6,27 @@ const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
 // ✅ Unified and Fixed Supabase Wrapper
-const supabase = {
-    // Base request handler (UPDATED TO SHOW DETAILED ERRORS)
-    async query(url, options = {}) {
-        const headers = {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation',
-            ...options.headers
-        };
-        const response = await fetch(url, { ...options, headers });
-        
-        // 🚨 اگر ایرر آئے تو اس کی تفصیلات کنسول میں پرنٹ کریں
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("🔥 Supabase Detailed Error:", errorData);
-            throw new Error(`Supabase error: ${errorData.message || response.statusText}`);
-        }
-        return response.json();
-    },
+async query(url, options = {}) {
+    const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        ...options.headers
+    };
+    const response = await fetch(url, { ...options, headers });
+    
+    // اگر رسپانس ناکام ہو تو ایرر تھرو کریں
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Supabase error: ${errorData.message || response.statusText}`);
+    }
+
+    // --- نئی تبدیلی یہاں ہے ---
+    const text = await response.text(); // پہلے رسپانس کو ٹیکسٹ کی شکل میں لیں
+    if (!text) return null;             // اگر جواب خالی ہے تو null واپس کریں
+    return JSON.parse(text);            // اگر جواب میں کچھ ہے تو اسے JSON بنائیں
+},
 
     // New 'from' function with full chain support
     from(table) {
