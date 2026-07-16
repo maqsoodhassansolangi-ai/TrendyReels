@@ -594,8 +594,8 @@ function initSecretAdmin() {
     });
 }
 
-// ============================================
-// TrendyReels - V3.4.1 (COMPLETE FRESH VERSION) - PART 3
+ // ============================================
+// TrendyReels - V3.4.1 (FINAL PART 3) - PART 3
 // ============================================
 
 // ✅ PapaParse Library Loader
@@ -609,12 +609,33 @@ function loadPapaParse() {
     });
 }
 
+// ✅ NEW: Direct Fetch ensureCategory (No custom from function used)
 async function ensureCategory(categoryName) {
     if (!categoryName) return 'General';
     try {
-        const existing = await supabase.get('categories', { name: categoryName });
+        // 1. Check if category exists using direct fetch
+        const checkUrl = `${SUPABASE_URL}/rest/v1/categories?name=eq.${encodeURIComponent(categoryName)}`;
+        const checkResponse = await fetch(checkUrl, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const existing = await checkResponse.json();
         if (existing && existing.length > 0) return existing[0].name;
-        const newCat = await supabase.post('categories', { name: categoryName });
+
+        // 2. If not exists, create it using direct fetch
+        const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ name: categoryName })
+        });
+        const newCat = await insertResponse.json();
         return newCat[0]?.name || 'General';
     } catch (error) {
         console.error('Error ensuring category:', error);
@@ -736,6 +757,48 @@ function autoConvertUrlToEmbed(url) {
     return `<video controls src="${url}" style="width:100%;"></video>`;
 }
 
+async function handleBulkUpload(file) {
+    if (!file) { alert('Please select a file first.'); return; }
+    const progressEl = document.getElementById('uploadProgress');
+    const resultEl = document.getElementById('uploadResult');
+    progressEl.style.display = 'block';
+    progressEl.textContent = '📂 Reading file...';
+    resultEl.style.display = 'none';
+    try {
+        await loadPapaParse();
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+            rows = parsed.data;
+        } else if (file.name.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            rows = Array.isArray(json) ? json : [json];
+        } else {
+            alert('Only .csv and .json files are supported.');
+            progressEl.style.display = 'none';
+            return;
+        }
+        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
+        progressEl.textContent = `⏳ Processing ${rows.length} videos...`;
+        let successCount = 0, failCount = 0, failList = [];
+        for (let i = 0; i < rows.length; i++) {
+            progressEl.textContent = `⏳ Processing ${i+1} / ${rows.length}...`;
+            const result = await processVideoData(rows[i]);
+            if (result && result.success) successCount++;
+            else if (result) { failCount++; failList.push(`${result.title} (${result.error})`); }
+        }
+        progressEl.style.display = 'none';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `✅ Upload Complete!<br>📹 ${successCount} videos added.<br>${failCount > 0 ? `⚠️ ${failCount} failed.` : ''}`;
+        if (failList.length > 0) console.warn('Failed:', failList);
+        await loadVideos();
+    } catch (error) {
+        progressEl.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    }
+}
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FRESH VERSION) - PART 4
 // ============================================
