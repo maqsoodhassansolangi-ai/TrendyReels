@@ -1,8 +1,7 @@
 // ============================================
-// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 1
+// TrendyReels - V3.3 (Stable Base) - PART 1
 // ============================================
 
-// Supabase Configuration
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
@@ -292,9 +291,13 @@ async function bulkDelete() {
     if (!confirm(`Delete ${ids.length} selected video(s)?`)) return;
     try { for (const id of ids) await supabase.delete('videos', id); await loadVideos(); alert(`✅ ${ids.length} video(s) deleted.`); } 
     catch (error) { alert(`❌ Error: ${error.message}`); }
-}
+            }
 
-// Improved Copyright Logic (Safe by Default)
+// ============================================
+// TrendyReels - V3.3 (Stable Base) - PART 2
+// ============================================
+
+// --- Auto-Detect Copyright ---
 function autoDetectCopyright(title, channel) {
     const freeKeywords = ['copyright free','no copyright','nocopyright','creative commons','cc0','royalty free','free use','public domain','ncs','ncs release'];
     const text = (title + ' ' + channel).toLowerCase();
@@ -302,11 +305,7 @@ function autoDetectCopyright(title, channel) {
         if (text.includes(keyword)) return true;
     }
     return false;
-            }
-
-// ============================================
-// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 2
-// ============================================
+}
 
 // --- YouTube Bot ---
 async function runYoutubeBot() {
@@ -317,10 +316,8 @@ async function runYoutubeBot() {
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     const filterChoice = prompt(`Filter:\n1=Free\n2=Copyrighted\n3=Mixed`, '3');
     let licenseFilter = '';
-    let isCopyrightFree = true;
-    if (filterChoice === '1') { licenseFilter = '&videoLicense=creativeCommon'; isCopyrightFree = true; }
-    else if (filterChoice === '2') { licenseFilter = '&videoLicense=any'; isCopyrightFree = false; }
-    else { licenseFilter = ''; isCopyrightFree = autoDetectCopyright(keyword, 'YouTube'); }
+    if (filterChoice === '1') licenseFilter = '&videoLicense=creativeCommon';
+    else if (filterChoice === '2') licenseFilter = '&videoLicense=any';
     const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${count}&type=video${licenseFilter}&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`;
     try {
         const res = await fetch(apiUrl);
@@ -332,13 +329,13 @@ async function runYoutubeBot() {
             thumbnail: item.snippet.thumbnails.high.url,
             embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
             channel: item.snippet.channelTitle,
-            is_copyright_free: isCopyrightFree
+            is_copyright_free: filterChoice === '1' ? true : autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
         }));
         if (videos.length > 0) showReviewPanel(videos, categoryInput);
     } catch (error) { alert(`❌ YouTube Error: ${error.message}`); }
 }
 
-// --- Pixabay Bot ---
+// --- Pixabay Bot (Fixed Thumbnails) ---
 async function runPixabayBot() {
     const categoryInput = prompt(`Select Category:`, 'Technology');
     if (!categoryInput) return;
@@ -387,181 +384,7 @@ async function runDailymotionBot() {
     } catch (error) { alert(`❌ Dailymotion Error: ${error.message}`); }
 }
 
-// ============================================
-// 🚀 RAPIDAPI BOTS (FIXED HEADERS)
-// ============================================
-
-// --- TikTok Bot (RapidAPI - Fixed) ---
-async function runTikTokBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const choice = prompt(`Search by?\n1=Hashtag\n2=Username`, '1');
-    const keyword = choice === '2' 
-        ? prompt(`Enter TikTok Username (without @):`, 'cristiano') 
-        : prompt(`Enter TikTok Hashtag (without #):`, 'dance');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    try {
-        const apiUrl = `https://tiktok-api23.p.rapidapi.com/api/search/video?keyword=${encodeURIComponent(keyword)}&count=${count}`;
-        const response = await fetch(apiUrl, {
-            headers: {
-                'X-RapidAPI-Key': '268cdf2dd9msh2272e0324b89ca5p17b014jsn0c8e1d626484',
-                'X-RapidAPI-Host': 'tiktok-api23.p.rapidapi.com'
-            }
-        });
-        if (!response.ok) throw new Error('RapidAPI error');
-        const data = await response.json();
-        const videos = (data.data || []).map((item, i) => ({
-            id: `tiktok_${Date.now()}_${i}`,
-            title: item.title || `TikTok Video #${i+1}`,
-            thumbnail: item.thumbnail || item.cover || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
-            embed_code: `<video controls src="${item.play_addr || item.url || 'https://www.w3schools.com/html/mov_bbb.mp4'}" poster="${item.thumbnail || item.cover || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'}"></video>`,
-            channel: item.author?.unique_id || `#${keyword}`,
-            is_copyright_free: false
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-        else alert('⚠️ No videos found on TikTok.');
-    } catch (error) { alert(`❌ TikTok Error: ${error.message}`); }
-}
-
-// --- Instagram Bot (RapidAPI - Fixed) ---
-async function runInstagramBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const choice = prompt(`Search by?\n1=Hashtag\n2=Username`, '1');
-    const keyword = choice === '2' 
-        ? prompt(`Enter Instagram Username (without @):`, 'cristiano') 
-        : prompt(`Enter Instagram Hashtag (without #):`, 'dance');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    try {
-        const apiUrl = `https://instagram-looter2.p.rapidapi.com/search?q=${encodeURIComponent(keyword)}&limit=${count}`;
-        const response = await fetch(apiUrl, {
-            headers: {
-                'X-RapidAPI-Key': '268cdf2dd9msh2272e0324b89ca5p17b014jsn0c8e1d626484',
-                'X-RapidAPI-Host': 'instagram-looter2.p.rapidapi.com'
-            }
-        });
-        if (!response.ok) throw new Error('RapidAPI error');
-        const data = await response.json();
-        const videos = (data.data || []).map((item, i) => ({
-            id: `instagram_${Date.now()}_${i}`,
-            title: item.title || `Instagram Reel #${i+1}`,
-            thumbnail: item.thumbnail || item.image || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
-            embed_code: `<video controls src="${item.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4'}" poster="${item.thumbnail || item.image || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'}"></video>`,
-            channel: item.username || `#${keyword}`,
-            is_copyright_free: false
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-        else alert('⚠️ No videos found on Instagram.');
-    } catch (error) { alert(`❌ Instagram Error: ${error.message}`); }
-}
-
-// --- X (Twitter) Bot (RapidAPI - Fixed) ---
-async function runTwitterBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter X (Twitter) keyword:`, 'trending');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    try {
-        const apiUrl = `https://all-in-one-downloader6.p.rapidapi.com/search?query=${encodeURIComponent(keyword)}&limit=${count}`;
-        const response = await fetch(apiUrl, {
-            headers: {
-                'X-RapidAPI-Key': '268cdf2dd9msh2272e0324b89ca5p17b014jsn0c8e1d626484',
-                'X-RapidAPI-Host': 'all-in-one-downloader6.p.rapidapi.com'
-            }
-        });
-        if (!response.ok) throw new Error('RapidAPI error');
-        const data = await response.json();
-        const videos = (data.data || []).map((item, i) => ({
-            id: `x_${Date.now()}_${i}`,
-            title: item.title || `X Video #${i+1}`,
-            thumbnail: item.thumbnail || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
-            embed_code: `<video controls src="${item.video_url || 'https://www.w3schools.com/html/mov_bbb.mp4'}" poster="${item.thumbnail || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'}"></video>`,
-            channel: item.username || `#${keyword}`,
-            is_copyright_free: false
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-        else alert('⚠️ No videos found on X.');
-    } catch (error) { alert(`❌ X Error: ${error.message}`); }
-            }
-// ============================================
-// TrendyReels - V3.1 (8 Bots - Fixed RapidAPI) - PART 3
-// ============================================
-
-// --- Vimeo Bot (Scraping) ---
-async function runVimeoBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter Vimeo keyword:`, 'nature');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    try {
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://vimeo.com/search?q=${encodeURIComponent(keyword)}`)}`;
-        const response = await fetch(proxyUrl);
-        const html = await response.text();
-        const videos = [];
-        const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
-        const videoMatches = html.match(/https?:\/\/[^"'\s]+\.(mp4|webm)/g) || [];
-        const uniqueThumbnails = [...new Set(thumbnailMatches)];
-        const uniqueVideos = [...new Set(videoMatches)];
-        for (let i = 0; i < Math.min(count, uniqueThumbnails.length, uniqueVideos.length); i++) {
-            videos.push({
-                id: `vimeo_${Date.now()}_${i}`,
-                title: `${keyword} Vimeo Video #${i+1}`,
-                thumbnail: uniqueThumbnails[i] || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg',
-                embed_code: `<video controls src="${uniqueVideos[i] || 'https://www.w3schools.com/html/mov_bbb.mp4'}" poster="${uniqueThumbnails[i] || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'}"></video>`,
-                channel: keyword,
-                is_copyright_free: false
-            });
-        }
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-        else alert('⚠️ No videos found on Vimeo.');
-    } catch (error) { alert(`❌ Vimeo Error: ${error.message}`); }
-}
-
-// --- Reddit Bot (JSON API) ---
-async function runRedditBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter Reddit keyword:`, 'funny');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    try {
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://www.reddit.com/search.json?q=${encodeURIComponent(keyword)}&limit=${count}`)}`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('Reddit API error');
-        const json = await response.json();
-        const posts = json.data?.children || [];
-        const videos = [];
-        posts.forEach((post, i) => {
-            const data = post.data;
-            let videoUrl = '';
-            if (data.media?.reddit_video?.fallback_url) videoUrl = data.media.reddit_video.fallback_url;
-            else if (data.preview?.reddit_video_preview?.fallback_url) videoUrl = data.preview.reddit_video_preview.fallback_url;
-            else if (data.url && data.url.endsWith('.mp4')) videoUrl = data.url;
-            if (videoUrl) {
-                const thumbnail = data.thumbnail && data.thumbnail.startsWith('http') ? data.thumbnail : 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg';
-                videos.push({
-                    id: `reddit_${data.id}_${Date.now()}`,
-                    title: data.title,
-                    thumbnail: thumbnail,
-                    embed_code: `<video controls src="${videoUrl}" poster="${thumbnail}" style="width:100%; aspect-ratio:16/9;"></video>`,
-                    channel: `r/${data.subreddit}`,
-                    is_copyright_free: autoDetectCopyright(data.title, data.subreddit)
-                });
-            }
-        });
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-        else alert('⚠️ No videos found on Reddit.');
-    } catch (error) { alert(`❌ Reddit Error: ${error.message}`); }
-}
-
-// ============================================
-// Shared Review Panel (Unchanged)
-// ============================================
-
+// --- Shared Review Panel ---
 function showReviewPanel(videos, defaultCategory = 'Technology') {
     if (!videos || videos.length === 0) { alert('No videos to review.'); return; }
     state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: defaultCategory, approved: true, is_copyright_free: v.is_copyright_free }));
@@ -658,32 +481,10 @@ function showReviewPanel(videos, defaultCategory = 'Technology') {
     });
 }
 
-const ADMIN_PASSWORD = 'admin123';
-let tapCount = 0;
-let tapTimer = null;
-
-function initSecretAdmin() {
-    const secretBtn = $('#secretAdminBtn');
-    if (!secretBtn) return;
-    secretBtn.addEventListener('click', () => {
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
-        if (tapCount === 5) {
-            const password = prompt('🔐 Enter Admin Password:');
-            if (password === ADMIN_PASSWORD) window.location.href = 'admin.html';
-            else { alert('❌ Wrong password!'); tapCount = 0; }
-        }
-    });
-}
-
+// --- Ads Manager (8 Slots) ---
 async function loadAdSlots() {
-    try {
-        const data = await supabase.get('ad_slots');
-        state.adSlots = data || [];
-        renderAdSlots();
-        return data;
-    } catch (error) { console.error('Error loading ad slots:', error); return []; }
+    try { const data = await supabase.get('ad_slots'); state.adSlots = data || []; renderAdSlots(); return data; } 
+    catch (error) { console.error('Error loading ad slots:', error); return []; }
 }
 
 function renderAdSlots() {
@@ -735,6 +536,27 @@ function renderAdSlots() {
     });
 }
 
+// --- Secret Admin ---
+const ADMIN_PASSWORD = 'admin123';
+let tapCount = 0;
+let tapTimer = null;
+
+function initSecretAdmin() {
+    const secretBtn = $('#secretAdminBtn');
+    if (!secretBtn) return;
+    secretBtn.addEventListener('click', () => {
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
+        if (tapCount === 5) {
+            const password = prompt('🔐 Enter Admin Password:');
+            if (password === ADMIN_PASSWORD) window.location.href = 'admin.html';
+            else { alert('❌ Wrong password!'); tapCount = 0; }
+        }
+    });
+}
+
+// --- Search ---
 let searchTimeout = null;
 function handleSearch(query) {
     state.searchQuery = query;
@@ -742,6 +564,7 @@ function handleSearch(query) {
     searchTimeout = setTimeout(() => renderVideos(), 300);
 }
 
+// --- Init ---
 async function init() {
     applyTheme();
     await loadCategories();
@@ -800,18 +623,13 @@ async function init() {
     const botMap = [
         { id: 'runYoutubeBot', fn: runYoutubeBot },
         { id: 'runPixabayBot', fn: runPixabayBot },
-        { id: 'runDailymotionBot', fn: runDailymotionBot },
-        { id: 'runTikTokBot', fn: runTikTokBot },
-        { id: 'runInstagramBot', fn: runInstagramBot },
-        { id: 'runTwitterBot', fn: runTwitterBot },
-        { id: 'runVimeoBot', fn: runVimeoBot },
-        { id: 'runRedditBot', fn: runRedditBot }
+        { id: 'runDailymotionBot', fn: runDailymotionBot }
     ];
     botMap.forEach(({ id, fn }) => {
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
-    console.log('TrendyReels V3.1 (8 Bots Final RapidAPI Fixed) initialized!');
+    console.log('TrendyReels V3.3 (Stable Base) initialized!');
 }
 
 if (document.readyState === 'loading') {
