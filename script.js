@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - 8 Bots (FINAL WORKING VERSION) - PART 1
+// TrendyReels - 8 Bots (FINAL FIXED VERSION) - PART 1
 // ============================================
 
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
@@ -89,11 +89,9 @@ async function loadCategories() {
 function renderCategories() {
     const container = document.querySelector('.category-scroll');
     if (!container) return;
-    
     const allBtn = container.querySelector('.category-pill[data-category="all"]');
     container.innerHTML = '';
     container.appendChild(allBtn);
-    
     state.categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = 'category-pill';
@@ -101,7 +99,6 @@ function renderCategories() {
         btn.textContent = cat.name;
         container.appendChild(btn);
     });
-    
     container.querySelectorAll('.category-pill').forEach(btn => {
         btn.addEventListener('click', () => {
             container.querySelectorAll('.category-pill').forEach(b => b.classList.remove('active'));
@@ -110,7 +107,6 @@ function renderCategories() {
             renderVideos();
         });
     });
-    
     const select = $('#videoCategory');
     if (select) {
         select.innerHTML = '<option value="">Select Category</option>';
@@ -139,27 +135,18 @@ async function loadVideos() {
 function renderVideos() {
     const grid = $('#videoGrid');
     if (!grid) return;
-    
     let filtered = state.videos;
-    
     if (state.currentCategory !== 'all') {
-        filtered = filtered.filter(v => 
-            v.category && v.category.toLowerCase() === state.currentCategory
-        );
+        filtered = filtered.filter(v => v.category && v.category.toLowerCase() === state.currentCategory);
     }
-    
     if (state.searchQuery.trim()) {
         const q = state.searchQuery.toLowerCase();
-        filtered = filtered.filter(v => 
-            v.title && v.title.toLowerCase().includes(q)
-        );
+        filtered = filtered.filter(v => v.title && v.title.toLowerCase().includes(q));
     }
-    
     if (filtered.length === 0) {
         grid.innerHTML = `<div class="empty-state"><p>No videos found</p></div>`;
         return;
     }
-    
     grid.innerHTML = filtered.map(video => {
         const isNativeVideo = video.embed_code.trim().startsWith('<video');
         let mediaHtml = '';
@@ -168,26 +155,10 @@ function renderVideos() {
             const videoSrc = srcMatch ? srcMatch[1] : '';
             mediaHtml = `<video class="video-thumbnail" src="${videoSrc}" preload="metadata" muted playsinline></video>`;
         } else {
-            mediaHtml = `<img class="video-thumbnail" 
-                 src="${getThumbnail(video.embed_code)}" 
-                 alt="${video.title || 'Video'}"
-                 loading="lazy"
-                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22><rect fill=%22%23CCCCCC%22 width=%22320%22 height=%22180%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2220%22>No Thumbnail</text></svg>'">`;
+            mediaHtml = `<img class="video-thumbnail" src="${getThumbnail(video.embed_code)}" alt="${video.title || 'Video'}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22180%22><rect fill=%22%23CCCCCC%22 width=%22320%22 height=%22180%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2220%22>No Thumbnail</text></svg>'">`;
         }
-        return `
-            <div class="video-card" data-id="${video.id}">
-                ${mediaHtml}
-                <div class="video-info">
-                    <div class="video-title">${video.title || 'Untitled Video'}</div>
-                    <div class="video-meta">
-                        <span class="video-category">${video.category || 'Uncategorized'}</span>
-                        ${video.is_copyright_free ? '<span class="copyright-badge">© Free</span>' : ''}
-                    </div>
-                </div>
-            </div>
-        `;
+        return `<div class="video-card" data-id="${video.id}">${mediaHtml}<div class="video-info"><div class="video-title">${video.title || 'Untitled Video'}</div><div class="video-meta"><span class="video-category">${video.category || 'Uncategorized'}</span>${video.is_copyright_free ? '<span class="copyright-badge">© Free</span>' : ''}</div></div></div>`;
     }).join('');
-    
     grid.querySelectorAll('.video-card').forEach(card => {
         card.addEventListener('click', () => {
             const id = parseInt(card.dataset.id);
@@ -223,23 +194,15 @@ function openVideoModal(video) {
     const title = $('#modalVideoTitle');
     const downloadBtn = $('#downloadBtn');
     const shareBtn = $('#shareBtn');
-    
     if (video.embed_code.trim().startsWith('<video')) {
         player.innerHTML = video.embed_code;
         const nativeVideo = player.querySelector('video');
-        if (nativeVideo) {
-            nativeVideo.style.width = '100%';
-            nativeVideo.style.aspectRatio = '16/9';
-            nativeVideo.style.borderRadius = '8px';
-            nativeVideo.style.outline = 'none';
-        }
+        if (nativeVideo) { nativeVideo.style.width = '100%'; nativeVideo.style.aspectRatio = '16/9'; nativeVideo.style.borderRadius = '8px'; nativeVideo.style.outline = 'none'; }
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
         player.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
     }
-    
     title.textContent = video.title || 'Untitled Video';
-    
     if (video.is_copyright_free) {
         downloadBtn.style.display = 'inline-block';
         downloadBtn.onclick = () => {
@@ -253,16 +216,12 @@ function openVideoModal(video) {
                 else window.open(embedUrl, '_blank');
             }
         };
-    } else {
-        downloadBtn.style.display = 'none';
-    }
-    
+    } else { downloadBtn.style.display = 'none'; }
     shareBtn.onclick = () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
         window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
     };
-    
     modal.classList.add('active');
 }
 
@@ -344,7 +303,7 @@ function autoDetectCopyright(title, channel) {
 }
 
 // ============================================
-// TrendyReels - 8 Bots (FINAL WORKING VERSION) - PART 2
+// TrendyReels - 8 Bots (FINAL FIXED VERSION) - PART 2
 // ============================================
 
 // --- YouTube Bot ---
@@ -391,8 +350,9 @@ async function runPixabayBot() {
         const videos = json.hits.map(v => ({
             id: v.id,
             title: v.tags || 'Pixabay Video',
-            thumbnail: v.webformatURL || v.previewURL || v.image,
-            embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.webformatURL || v.previewURL}"></video>`,
+            // ✅ FIXED: Use the correct thumbnail URL
+            thumbnail: v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image,
+            embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image}"></video>`,
             channel: v.user || 'Pixabay',
             is_copyright_free: true
         }));
@@ -422,10 +382,10 @@ async function runDailymotionBot() {
         }));
         if (videos.length > 0) showReviewPanel(videos, categoryInput);
     } catch (error) { alert(`❌ Dailymotion Error: ${error.message}`); }
-            }
+    }
 
-// ============================================
-// TrendyReels - 8 Bots (FINAL WORKING VERSION) - PART 3
+          // ============================================
+// TrendyReels - 8 Bots (FINAL FIXED VERSION) - PART 3
 // ============================================
 
 // --- TikTok Scraper Bot ---
@@ -439,13 +399,11 @@ async function runTikTokBot() {
     if (!keyword) return;
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     try {
-        // TikTok public scraping (simulated via public embed API)
         const searchQuery = choice === '2' ? `@${keyword}` : `#${keyword}`;
-        const url = `https://www.tiktok.com/search/video?q=${encodeURIComponent(searchQuery)}`;
-        // Since TikTok blocks direct fetch, we use a public proxy for demo
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        // ✅ FIXED: Using a more reliable CORS proxy
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://www.tiktok.com/search/video?q=${encodeURIComponent(searchQuery)}`)}`;
+        const response = await fetch(proxyUrl);
         const html = await response.text();
-        // Parse thumbnails and videos from HTML (simplified)
         const videos = [];
         const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
         const videoMatches = html.match(/https?:\/\/[^"'\s]+\.(mp4|webm)/g) || [];
@@ -477,8 +435,9 @@ async function runInstagramBot() {
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     try {
         const searchQuery = choice === '2' ? `@${keyword}` : `#${keyword}`;
-        const url = `https://www.instagram.com/explore/tags/${encodeURIComponent(keyword)}/`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        // ✅ FIXED: Using a more reliable CORS proxy
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://www.instagram.com/explore/tags/${encodeURIComponent(keyword)}/`)}`;
+        const response = await fetch(proxyUrl);
         const html = await response.text();
         const videos = [];
         const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
@@ -510,8 +469,9 @@ async function runTwitterBot() {
     if (!keyword) return;
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     try {
-        const url = `https://x.com/search?q=${encodeURIComponent(keyword)}&f=live`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        // ✅ FIXED: Using a more reliable CORS proxy
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://x.com/search?q=${encodeURIComponent(keyword)}&f=live`)}`;
+        const response = await fetch(proxyUrl);
         const html = await response.text();
         const videos = [];
         const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
@@ -530,10 +490,10 @@ async function runTwitterBot() {
         }
         if (videos.length > 0) showReviewPanel(videos, categoryInput);
     } catch (error) { alert(`❌ X Error: ${error.message}`); }
-            }
+}
 
 // ============================================
-// TrendyReels - 8 Bots (FINAL WORKING VERSION) - PART 4
+// TrendyReels - 8 Bots (FINAL FIXED VERSION) - PART 4
 // ============================================
 
 // --- Vimeo Scraper Bot ---
@@ -547,8 +507,9 @@ async function runVimeoBot() {
     if (!keyword) return;
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     try {
-        const url = `https://vimeo.com/search?q=${encodeURIComponent(keyword)}`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        // ✅ FIXED: Using a more reliable CORS proxy
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://vimeo.com/search?q=${encodeURIComponent(keyword)}`)}`;
+        const response = await fetch(proxyUrl);
         const html = await response.text();
         const videos = [];
         const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
@@ -577,8 +538,9 @@ async function runRedditBot() {
     if (!keyword) return;
     const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
     try {
-        const url = `https://www.reddit.com/search/?q=${encodeURIComponent(keyword)}`;
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        // ✅ FIXED: Using a more reliable CORS proxy
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`https://www.reddit.com/search/?q=${encodeURIComponent(keyword)}`)}`;
+        const response = await fetch(proxyUrl);
         const html = await response.text();
         const videos = [];
         const thumbnailMatches = html.match(/https?:\/\/[^"'\s]+\.(jpg|jpeg|png|webp)/g) || [];
@@ -597,13 +559,12 @@ async function runRedditBot() {
         }
         if (videos.length > 0) showReviewPanel(videos, categoryInput);
     } catch (error) { alert(`❌ Reddit Error: ${error.message}`); }
-}
+    }
 
 // ============================================
-// TrendyReels - 8 Bots (FINAL WORKING VERSION) - PART 5
+// TrendyReels - 8 Bots (FINAL FIXED VERSION) - PART 5
 // ============================================
 
-// --- Shared Review Panel ---
 function showReviewPanel(videos, defaultCategory = 'Technology') {
     if (!videos || videos.length === 0) { alert('No videos to review.'); return; }
     state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: defaultCategory, approved: true, is_copyright_free: v.is_copyright_free }));
@@ -700,7 +661,6 @@ function showReviewPanel(videos, defaultCategory = 'Technology') {
     });
 }
 
-// --- Secret Admin ---
 const ADMIN_PASSWORD = 'admin123';
 let tapCount = 0;
 let tapTimer = null;
@@ -720,7 +680,6 @@ function initSecretAdmin() {
     });
 }
 
-// --- Ads Manager ---
 async function loadAdSlots() {
     try {
         const data = await supabase.get('ad_slots');
@@ -779,7 +738,6 @@ function renderAdSlots() {
     });
 }
 
-// --- Search ---
 let searchTimeout = null;
 function handleSearch(query) {
     state.searchQuery = query;
@@ -787,7 +745,6 @@ function handleSearch(query) {
     searchTimeout = setTimeout(() => renderVideos(), 300);
 }
 
-// --- Init ---
 async function init() {
     applyTheme();
     await loadCategories();
@@ -857,7 +814,7 @@ async function init() {
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
-    console.log('TrendyReels V2.5 (8 Bots Final Working Version) initialized!');
+    console.log('TrendyReels V2.6 (8 Bots Final Fixed) initialized!');
 }
 
 if (document.readyState === 'loading') {
