@@ -6,7 +6,7 @@ const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
 // ✅ Unified and Fixed Supabase Wrapper
-async query(url, options = {}) {
+async query(endpoint, options = {}) {
     const headers = {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -24,7 +24,7 @@ async query(url, options = {}) {
 
     // --- نئی تبدیلی یہاں ہے ---
     const text = await response.text(); // پہلے رسپانس کو ٹیکسٹ کی شکل میں لیں
-    if (!text) return null;             // اگر جواب خالی ہے تو null واپس کریں
+    if (!text) return {};             // اگر جواب خالی ہے تو null واپس کریں
     return JSON.parse(text);            // اگر جواب میں کچھ ہے تو اسے JSON بنائیں
 },
 
