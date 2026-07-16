@@ -5,9 +5,8 @@
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
-// ✅ محفوظ اور اپ ڈیٹ شدہ Supabase Wrapper
+// ✅ مکمل طور پر یکجا شدہ اور مضبوط Supabase Wrapper (دوسرے AI کے مشورے کے مطابق)
 const supabase = {
-    // محفوظ اور مضبوط query ہینڈلر (دوسرے AI کے مشورے کے مطابق)
     async query(endpoint, options = {}) {
         const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
         const headers = {
@@ -17,91 +16,37 @@ const supabase = {
             'Prefer': 'return=representation',
             ...options.headers
         };
-
         try {
             const response = await fetch(url, { ...options, headers });
-            
-            // 1. خالی رسپانس یا 204 No Content کو ہینڈل کریں
             if (response.status === 204) return null;
-
-            // 2. رسپانس کا ٹیکسٹ حاصل کریں
             const text = await response.text();
-            
-            // 3. اگر رسپانس خالی ہے تو null واپس کریں
             if (!text) return null;
-
-            // 4. اب JSON پارس کرنے کی کوشش کریں
-            try {
-                const data = JSON.parse(text);
-                
-                // اگر سرور ایرر دے رہا ہے
-                if (!response.ok) {
-                    console.error("Supabase Error Data:", data);
-                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                }
-                return data;
-            } catch (e) {
-                // اگر ٹیکسٹ JSON نہیں ہے (مثلاً HTML ایرر پیج)
-                console.error("Failed to parse JSON. Raw response:", text);
-                throw new Error("Invalid JSON response from server");
-            }
-        } catch (error) {
-            console.error("Fetch error:", error);
-            throw error; // ایرر کو آگے بڑھا دیں تاکہ پتا چلے مسئلہ کیا ہے
-        }
+            const data = JSON.parse(text);
+            if (!response.ok) throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            return data;
+        } catch (error) { throw error; }
     },
 
-    // New 'from' function with full chain support
     from(table) {
         return {
             queryUrl: `${SUPABASE_URL}/rest/v1/${table}`,
-            
-            select: function(cols = '*') {
-                this.queryUrl += `?select=${cols}`;
-                return this;
-            },
-            
-            ilike: function(col, val) {
-                this.queryUrl += `&${col}=ilike.*${encodeURIComponent(val)}*`;
-                return this;
-            },
-
+            select: function(cols = '*') { this.queryUrl += `?select=${cols}`; return this; },
+            ilike: function(col, val) { this.queryUrl += `&${col}=ilike.*${encodeURIComponent(val)}*`; return this; },
             maybeSingle: async function() {
-                const res = await fetch(this.queryUrl, {
-                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-                });
+                const res = await fetch(this.queryUrl, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
                 const data = await res.json();
                 return { data: (data && data.length > 0) ? data[0] : null, error: null };
             },
-
-            insert: async function(data) {
-                return await supabase.query(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', body: JSON.stringify(data) });
+            upsert: async function(data) {
+                return await supabase.query(table, { method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(data) });
             },
-
-            upsert: async function(data, opts) {
-                return await supabase.query(`${SUPABASE_URL}/rest/v1/${table}`, { 
-                    method: 'POST', 
-                    headers: { 'Prefer': 'resolution=merge-duplicates' }, 
-                    body: JSON.stringify(data) 
-                });
-            }
+            insert: async function(data) { return await supabase.query(table, { method: 'POST', body: JSON.stringify(data) }); }
         };
     },
-
-    // Legacy functions for compatibility
-    async get(endpoint, params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return this.query(`${SUPABASE_URL}/rest/v1/${endpoint}?${query}`);
-    },
-    async post(endpoint, data) {
-        return this.query(`${SUPABASE_URL}/rest/v1/${endpoint}`, { method: 'POST', body: JSON.stringify(data) });
-    },
-    async patch(endpoint, data, id) {
-        return this.query(`${SUPABASE_URL}/rest/v1/${endpoint}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) });
-    },
-    async delete(endpoint, id) {
-        return this.query(`${SUPABASE_URL}/rest/v1/${endpoint}?id=eq.${id}`, { method: 'DELETE' });
-    }
+    async get(endpoint, params = {}) { const query = new URLSearchParams(params).toString(); return this.query(`${endpoint}?${query}`); },
+    async post(endpoint, data) { return this.query(endpoint, { method: 'POST', body: JSON.stringify(data) }); },
+    async patch(endpoint, data, id) { return this.query(`${endpoint}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
+    async delete(endpoint, id) { return this.query(`${endpoint}?id=eq.${id}`, { method: 'DELETE' }); }
 };
 
 let state = {
@@ -361,8 +306,7 @@ async function bulkDelete() {
     if (!confirm(`Delete ${ids.length} selected video(s)?`)) return;
     try { for (const id of ids) await supabase.delete('videos', id); await loadVideos(); alert(`✅ ${ids.length} video(s) deleted.`); } 
     catch (error) { alert(`❌ Error: ${error.message}`); }
-                    }
-
+        }
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FRESH VERSION) - PART 2
