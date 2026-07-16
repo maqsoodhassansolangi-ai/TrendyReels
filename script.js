@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
 // ✅ Unified and Fixed Supabase Wrapper
 const supabase = {
-    // Base request handler
+    // Base request handler (UPDATED TO SHOW DETAILED ERRORS)
     async query(url, options = {}) {
         const headers = {
             'apikey': SUPABASE_ANON_KEY,
@@ -17,7 +17,13 @@ const supabase = {
             ...options.headers
         };
         const response = await fetch(url, { ...options, headers });
-        if (!response.ok) throw new Error(`Supabase error: ${response.status}`);
+        
+        // 🚨 اگر ایرر آئے تو اس کی تفصیلات کنسول میں پرنٹ کریں
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("🔥 Supabase Detailed Error:", errorData);
+            throw new Error(`Supabase error: ${errorData.message || response.statusText}`);
+        }
         return response.json();
     },
 
