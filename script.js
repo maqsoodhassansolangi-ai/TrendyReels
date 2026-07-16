@@ -1,5 +1,5 @@
 // ============================================
-// TrendyReels - V3.3 (Stable Base) - PART 1
+// TrendyReels - V3.4.1 (Bulk Upload System) - PART 1
 // ============================================
 
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
@@ -291,11 +291,7 @@ async function bulkDelete() {
     if (!confirm(`Delete ${ids.length} selected video(s)?`)) return;
     try { for (const id of ids) await supabase.delete('videos', id); await loadVideos(); alert(`✅ ${ids.length} video(s) deleted.`); } 
     catch (error) { alert(`❌ Error: ${error.message}`); }
-            }
-
-// ============================================
-// TrendyReels - V3.3 (Stable Base) - PART 2
-// ============================================
+}
 
 // --- Auto-Detect Copyright ---
 function autoDetectCopyright(title, channel) {
@@ -307,84 +303,7 @@ function autoDetectCopyright(title, channel) {
     return false;
 }
 
-// --- YouTube Bot ---
-async function runYoutubeBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter YouTube keyword:`, 'cricket');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    const filterChoice = prompt(`Filter:\n1=Free\n2=Copyrighted\n3=Mixed`, '3');
-    let licenseFilter = '';
-    if (filterChoice === '1') licenseFilter = '&videoLicense=creativeCommon';
-    else if (filterChoice === '2') licenseFilter = '&videoLicense=any';
-    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${count}&type=video${licenseFilter}&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`;
-    try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error('YouTube API error');
-        const json = await res.json();
-        const videos = json.items.map(item => ({
-            id: item.id.videoId,
-            title: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.high.url,
-            embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
-            channel: item.snippet.channelTitle,
-            is_copyright_free: filterChoice === '1' ? true : autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-    } catch (error) { alert(`❌ YouTube Error: ${error.message}`); }
-}
-
-// --- Pixabay Bot (Fixed Thumbnails) ---
-async function runPixabayBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter Pixabay keyword:`, 'nature');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    const apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${count}`;
-    try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error('Pixabay API error');
-        const json = await res.json();
-        if (!json.hits || json.hits.length === 0) { alert('No videos found'); return; }
-        const videos = json.hits.map(v => ({
-            id: v.id,
-            title: v.tags || 'Pixabay Video',
-            thumbnail: v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image,
-            embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image}"></video>`,
-            channel: v.user || 'Pixabay',
-            is_copyright_free: true
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-    } catch (error) { alert(`❌ Pixabay Error: ${error.message}`); }
-}
-
-// --- Dailymotion Bot ---
-async function runDailymotionBot() {
-    const categoryInput = prompt(`Select Category:`, 'Technology');
-    if (!categoryInput) return;
-    const keyword = prompt(`Enter Dailymotion keyword:`, 'sports');
-    if (!keyword) return;
-    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
-    const apiUrl = `https://api.dailymotion.com/videos?search=${encodeURIComponent(keyword)}&fields=id,title,thumbnail_url,embed_html&limit=${count}`;
-    try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error('Dailymotion API error');
-        const json = await res.json();
-        const videos = json.list.map(v => ({
-            id: v.id,
-            title: v.title,
-            thumbnail: v.thumbnail_url,
-            embed_code: v.embed_html,
-            channel: 'Dailymotion',
-            is_copyright_free: autoDetectCopyright(v.title, 'Dailymotion')
-        }));
-        if (videos.length > 0) showReviewPanel(videos, categoryInput);
-    } catch (error) { alert(`❌ Dailymotion Error: ${error.message}`); }
-}
-
-// --- Shared Review Panel ---
+// --- Review Panel ---
 function showReviewPanel(videos, defaultCategory = 'Technology') {
     if (!videos || videos.length === 0) { alert('No videos to review.'); return; }
     state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: defaultCategory, approved: true, is_copyright_free: v.is_copyright_free }));
@@ -479,6 +398,84 @@ function showReviewPanel(videos, defaultCategory = 'Technology') {
         } catch (error) { alert(`❌ Error: ${error.message}`); }
         finally { saveBtn.textContent = '💾 Save Selected'; saveBtn.disabled = false; }
     });
+    }
+// ============================================
+// TrendyReels - V3.4.1 (Bulk Upload System) - PART 2
+// ============================================
+
+// --- YouTube Bot ---
+async function runYoutubeBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter YouTube keyword:`, 'cricket');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const filterChoice = prompt(`Filter:\n1=Free\n2=Copyrighted\n3=Mixed`, '3');
+    let licenseFilter = '';
+    if (filterChoice === '1') licenseFilter = '&videoLicense=creativeCommon';
+    else if (filterChoice === '2') licenseFilter = '&videoLicense=any';
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&maxResults=${count}&type=video${licenseFilter}&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('YouTube API error');
+        const json = await res.json();
+        const videos = json.items.map(item => ({
+            id: item.id.videoId,
+            title: item.snippet.title,
+            thumbnail: item.snippet.thumbnails.high.url,
+            embed_code: `<iframe width="560" height="315" src="https://www.youtube.com/embed/${item.id.videoId}" frameborder="0" allowfullscreen></iframe>`,
+            channel: item.snippet.channelTitle,
+            is_copyright_free: filterChoice === '1' ? true : autoDetectCopyright(item.snippet.title, item.snippet.channelTitle)
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ YouTube Error: ${error.message}`); }
+}
+
+async function runPixabayBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Pixabay keyword:`, 'nature');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const apiUrl = `https://pixabay.com/api/videos/?key=56707588-7f7c040c1e2ca5ef1b417bc38&q=${encodeURIComponent(keyword)}&per_page=${count}`;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('Pixabay API error');
+        const json = await res.json();
+        if (!json.hits || json.hits.length === 0) { alert('No videos found'); return; }
+        const videos = json.hits.map(v => ({
+            id: v.id,
+            title: v.tags || 'Pixabay Video',
+            thumbnail: v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image,
+            embed_code: `<video controls src="${v.videos.large.url || v.videos.tiny.url}" poster="${v.videos.large.thumbnail || v.videos.tiny.thumbnail || v.webformatURL || v.previewURL || v.image}"></video>`,
+            channel: v.user || 'Pixabay',
+            is_copyright_free: true
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ Pixabay Error: ${error.message}`); }
+}
+
+async function runDailymotionBot() {
+    const categoryInput = prompt(`Select Category:`, 'Technology');
+    if (!categoryInput) return;
+    const keyword = prompt(`Enter Dailymotion keyword:`, 'sports');
+    if (!keyword) return;
+    const count = parseInt(prompt('How many? (1-30):', '10')) || 10;
+    const apiUrl = `https://api.dailymotion.com/videos?search=${encodeURIComponent(keyword)}&fields=id,title,thumbnail_url,embed_html&limit=${count}`;
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('Dailymotion API error');
+        const json = await res.json();
+        const videos = json.list.map(v => ({
+            id: v.id,
+            title: v.title,
+            thumbnail: v.thumbnail_url,
+            embed_code: v.embed_html,
+            channel: 'Dailymotion',
+            is_copyright_free: autoDetectCopyright(v.title, 'Dailymotion')
+        }));
+        if (videos.length > 0) showReviewPanel(videos, categoryInput);
+    } catch (error) { alert(`❌ Dailymotion Error: ${error.message}`); }
 }
 
 // --- Ads Manager (8 Slots) ---
@@ -554,6 +551,153 @@ function initSecretAdmin() {
             else { alert('❌ Wrong password!'); tapCount = 0; }
         }
     });
+                    }
+
+
+// ============================================
+// TrendyReels - V3.4.1 (Bulk Upload System) - PART 3
+// ============================================
+
+// --- PapaParse Library (Loaded via CDN) ---
+function loadPapaParse() {
+    return new Promise((resolve) => {
+        if (window.Papa) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+        script.onload = () => resolve();
+        document.head.appendChild(script);
+    });
+}
+
+// --- Core Logic: processVideoData ---
+async function processVideoData(videoData) {
+    // Step 1: Sanitization — صرف ضروری فیلڈز رکھیں
+    const cleanData = {
+        title: videoData.title || videoData.caption || "Untitled",
+        url: videoData.url || videoData.link || videoData.video_url,
+        category: videoData.category || "General",
+        source: videoData.source || "manual"
+    };
+
+    // اگر URL نہ ہو تو اس ویڈیو کو چھوڑ دیں
+    if (!cleanData.url || cleanData.url.trim() === '') return null;
+
+    // Step 2: URL کو Embed Code میں تبدیل کریں
+    const embedCode = autoConvertUrlToEmbed(cleanData.url);
+
+    // Step 3: Supabase میں سیو کریں (Duplicate چیک کے ساتھ)
+    try {
+        const { data, error } = await supabase
+            .from('videos')
+            .upsert({ 
+                title: cleanData.title,
+                embed_code: embedCode,
+                url: cleanData.url, // UNIQUE constraint ہینڈل کرے گا
+                category: cleanData.category,
+                source: cleanData.source,
+                is_copyright_free: true,
+                published: true
+            }, { onConflict: 'url' }); // اگر URL موجود ہے تو Ignore کر دے
+
+        if (error) throw error;
+        return { success: true, title: cleanData.title };
+    } catch (error) {
+        console.error('Error saving video:', error);
+        return { success: false, title: cleanData.title, error: error.message };
+    }
+}
+
+// --- URL to Embed Code Converter ---
+function autoConvertUrlToEmbed(url) {
+    // YouTube
+    if (url.includes('youtube.com/watch?v=') || url.includes('youtu.be/')) {
+        const videoId = url.includes('youtu.be/') 
+            ? url.split('youtu.be/')[1]?.split('?')[0]
+            : url.split('v=')[1]?.split('&')[0];
+        return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+    }
+    // TikTok
+    if (url.includes('tiktok.com')) {
+        return `<blockquote class="tiktok-embed" cite="${url}" data-video-id="${url.split('/video/')[1]?.split('?')[0]}"><section><a target="_blank" href="${url}">TikTok Video</a></section></blockquote><script async src="https://www.tiktok.com/embed.js"></script>`;
+    }
+    // Instagram
+    if (url.includes('instagram.com')) {
+        return `<blockquote class="instagram-media" data-instgrm-permalink="${url}" data-instgrm-version="14"></blockquote><script async src="//www.instagram.com/embed.js"></script>`;
+    }
+    // Twitter/X
+    if (url.includes('twitter.com') || url.includes('x.com')) {
+        return `<blockquote class="twitter-tweet"><a href="${url}">Tweet</a></blockquote><script async src="https://platform.twitter.com/widgets.js"></script>`;
+    }
+    // Dailymotion    if (url.includes('dailymotion.com')) {
+        const videoId = url.split('/video/')[1]?.split('?')[0];
+        return `<iframe width="560" height="315" src="https://www.dailymotion.com/embed/video/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+    }
+    // Pixabay / Vimeo / عام لنکس کے لیے Fallback
+    return `<video controls src="${url}" style="width:100%;"></video>`;
+}
+
+// --- Bulk Upload Handler ---
+async function handleBulkUpload(file) {
+    if (!file) { alert('Please select a file first.'); return; }
+    const progressEl = document.getElementById('uploadProgress');
+    const resultEl = document.getElementById('uploadResult');
+    progressEl.style.display = 'block';
+    progressEl.textContent = '📂 Reading file...';
+    resultEl.style.display = 'none';
+
+    try {
+        // Load PapaParse if not already loaded
+        await loadPapaParse();
+
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+            rows = parsed.data;
+        } else if (file.name.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            rows = Array.isArray(json) ? json : [json];
+        } else {
+            alert('Only .csv and .json files are supported.');
+            progressEl.style.display = 'none';
+            return;
+        }
+
+        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
+
+        progressEl.textContent = `⏳ Processing ${rows.length} videos...`;
+        let successCount = 0;
+        let failCount = 0;
+        let failList = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            progressEl.textContent = `⏳ Processing ${i+1} / ${rows.length}...`;
+            const result = await processVideoData(rows[i]);
+            if (result && result.success) {
+                successCount++;
+            } else if (result) {
+                failCount++;
+                failList.push(`${result.title} (${result.error})`);
+            }
+        }
+
+        progressEl.style.display = 'none';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `
+            ✅ <strong>Upload Complete!</strong><br>
+            📹 <strong>${successCount}</strong> videos added successfully.<br>
+            ${failCount > 0 ? `⚠️ ${failCount} videos failed. Check console for details.` : ''}
+        `;
+        if (failList.length > 0) {
+            console.warn('Failed videos:', failList);
+        }
+        // Reload videos
+        await loadVideos();
+    } catch (error) {
+        progressEl.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    }
 }
 
 // --- Search ---
@@ -620,6 +764,17 @@ async function init() {
             $$('.video-checkbox').forEach(cb => cb.checked = selectAll.checked);
         });
     }
+
+    // Attach event listener for Bulk Upload
+    const fileInput = document.getElementById('bulkFileInput');
+    const uploadBtn = document.getElementById('uploadBulkBtn');
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            handleBulkUpload(file);
+        });
+    }
+
     const botMap = [
         { id: 'runYoutubeBot', fn: runYoutubeBot },
         { id: 'runPixabayBot', fn: runPixabayBot },
@@ -629,7 +784,7 @@ async function init() {
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
-    console.log('TrendyReels V3.3 (Stable Base) initialized!');
+    console.log('TrendyReels V3.4.1 (Bulk Upload System) initialized!');
 }
 
 if (document.readyState === 'loading') {
