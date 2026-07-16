@@ -1,32 +1,55 @@
 // ============================================
-// TrendyReels - V3.4.1 (COMPLETE FRESH VERSION) - PART 1
+// TrendyReels - V3.4.1 (FRESH PART 1) - PART 1
 // ============================================
 
 const SUPABASE_URL = 'https://tdbuvlyzgxdkmheocikf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xBiU1V-ZZxLkNF-Yw6dV5A_JEdF4Uig';
 
-// ✅ Unified and Fixed Supabase Wrapper
-async query(endpoint, options = {}) {
-    const headers = {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-        ...options.headers
-    };
-    const response = await fetch(url, { ...options, headers });
-    
-    // اگر رسپانس ناکام ہو تو ایرر تھرو کریں
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Supabase error: ${errorData.message || response.statusText}`);
-    }
+// ✅ محفوظ اور اپ ڈیٹ شدہ Supabase Wrapper
+const supabase = {
+    // محفوظ اور مضبوط query ہینڈلر (دوسرے AI کے مشورے کے مطابق)
+    async query(endpoint, options = {}) {
+        const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+        const headers = {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+            ...options.headers
+        };
 
-    // --- نئی تبدیلی یہاں ہے ---
-    const text = await response.text(); // پہلے رسپانس کو ٹیکسٹ کی شکل میں لیں
-    if (!text) return {};             // اگر جواب خالی ہے تو null واپس کریں
-    return JSON.parse(text);            // اگر جواب میں کچھ ہے تو اسے JSON بنائیں
-},
+        try {
+            const response = await fetch(url, { ...options, headers });
+            
+            // 1. خالی رسپانس یا 204 No Content کو ہینڈل کریں
+            if (response.status === 204) return null;
+
+            // 2. رسپانس کا ٹیکسٹ حاصل کریں
+            const text = await response.text();
+            
+            // 3. اگر رسپانس خالی ہے تو null واپس کریں
+            if (!text) return null;
+
+            // 4. اب JSON پارس کرنے کی کوشش کریں
+            try {
+                const data = JSON.parse(text);
+                
+                // اگر سرور ایرر دے رہا ہے
+                if (!response.ok) {
+                    console.error("Supabase Error Data:", data);
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
+                return data;
+            } catch (e) {
+                // اگر ٹیکسٹ JSON نہیں ہے (مثلاً HTML ایرر پیج)
+                console.error("Failed to parse JSON. Raw response:", text);
+                throw new Error("Invalid JSON response from server");
+            }
+        } catch (error) {
+            console.error("Fetch error:", error);
+            throw error; // ایرر کو آگے بڑھا دیں تاکہ پتا چلے مسئلہ کیا ہے
+        }
+    },
 
     // New 'from' function with full chain support
     from(table) {
@@ -338,7 +361,8 @@ async function bulkDelete() {
     if (!confirm(`Delete ${ids.length} selected video(s)?`)) return;
     try { for (const id of ids) await supabase.delete('videos', id); await loadVideos(); alert(`✅ ${ids.length} video(s) deleted.`); } 
     catch (error) { alert(`❌ Error: ${error.message}`); }
-}
+                    }
+
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FRESH VERSION) - PART 2
