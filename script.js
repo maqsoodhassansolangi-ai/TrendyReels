@@ -621,18 +621,45 @@ async function ensureCategory(categoryName) {
     }
 }
 
+// ============================================
+// 🚀 NEW: AI-POWERED SMART PARSER
+// یہ لاجک کسی بھی فارمیٹ کو خود بخود پہچان لے گی
+// ============================================
 async function processVideoData(videoData) {
+    // Step 1: AI Step — کسی بھی کالم کو خود بخود پہچانیں
     let url = null, title = null, category = null;
-    const possibleUrlKeys = ['url', 'URL', 'link', 'Link', 'embed', 'Embed', 'embed_code', 'EmbedCode', 'video_url', 'VideoUrl'];
-    const possibleTitleKeys = ['title', 'Title', 'name', 'Name', 'caption', 'Caption', 'video_title', 'VideoTitle'];
-    const possibleCategoryKeys = ['category', 'Category', 'cat', 'Cat'];
+    
+    // تمام کالمز کو لوپ کریں اور خود بخود URL پہچانیں
+    for (const [key, value] of Object.entries(videoData)) {
+        const keyLower = key.toLowerCase();
+        // اگر کوئی ویلیو http سے شروع ہو تو اسے URL مان لیں
+        if (value && typeof value === 'string' && value.trim().startsWith('http')) {
+            url = value.trim();
+        }
+        // Title ڈھونڈیں
+        if (!title && (keyLower.includes('title') || keyLower.includes('name') || keyLower.includes('caption'))) {
+            title = value.trim();
+        }
+        // Category ڈھونڈیں
+        if (!category && (keyLower.includes('category') || keyLower.includes('cat'))) {
+            category = value.trim();
+        }
+    }
 
-    for (const key of possibleUrlKeys) if (videoData[key]) { url = videoData[key]; break; }
-    for (const key of possibleTitleKeys) if (videoData[key]) { title = videoData[key]; break; }
-    for (const key of possibleCategoryKeys) if (videoData[key]) { category = videoData[key]; break; }
+    // اگر URL نہیں ملا تو چیک کریں کہ کیا Embed Code ہے
+    if (!url) {
+        for (const value of Object.values(videoData)) {
+            if (typeof value === 'string' && (value.trim().startsWith('<iframe') || value.trim().startsWith('<video'))) {
+                url = value.trim();
+                break;
+            }
+        }
+    }
 
+    // اگر کچھ بھی نہیں ملا تو اس ویڈیو کو چھوڑ دیں
     if (!url) return null;
 
+    // Step 2: Embed Code اور URL کو الگ کریں
     let embedCode = '', finalUrl = '';
     if (url.trim().startsWith('<iframe') || url.trim().startsWith('<video') || url.trim().startsWith('<blockquote')) {
         embedCode = url.trim();
@@ -641,16 +668,20 @@ async function processVideoData(videoData) {
         embedCode = autoConvertUrlToEmbed(url);
     }
 
+    // Step 3: Title ڈیفالٹ کریں اگر نہیں ملا
     if (!title) title = 'Untitled Video';
+
+    // Step 4: Category خود بخود سیٹ کریں
     const assignedCategory = await ensureCategory(category || 'General');
 
+    // Step 5: Thumbnail نکالیں (YouTube کے لیے)
     let thumbnail = '';
     if (embedCode.includes('youtube.com/embed/')) {
         const id = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
         if (id) thumbnail = `https://img.youtube.com/vi/${id[1]}/hqdefault.jpg`;
     }
 
-    // Fixed Copyright Logic: Default is Restricted
+    // Step 6: Copyright خود بخود ڈیٹیکٹ کریں
     const freeKeywords = ['copyright free', 'no copyright', 'creative commons', 'cc0', 'royalty free'];
     let isCopyrightFree = false;
     if (title) {
@@ -660,6 +691,7 @@ async function processVideoData(videoData) {
         }
     }
 
+    // Step 7: Supabase میں محفوظ کریں
     try {
         const { data, error } = await supabase
             .from('videos')
@@ -701,6 +733,49 @@ function autoConvertUrlToEmbed(url) {
         return `<iframe width="560" height="315" src="https://www.dailymotion.com/embed/video/${id}" frameborder="0" allowfullscreen></iframe>`;
     }
     return `<video controls src="${url}" style="width:100%;"></video>`;
+}
+
+async function handleBulkUpload(file) {
+    if (!file) { alert('Please select a file first.'); return; }
+    const progressEl = document.getElementById('uploadProgress');
+    const resultEl = document.getElementById('uploadResult');
+    progressEl.style.display = 'block';
+    progressEl.textContent = '📂 Reading file...';
+    resultEl.style.display = 'none';
+    try {
+        await loadPapaParse();
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+            rows = parsed.data;
+        } else if (file.name.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            rows = Array.isArray(json) ? json : [json];
+        } else {
+            alert('Only .csv and .json files are supported.');
+            progressEl.style.display = 'none';
+            return;
+        }
+        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
+        progressEl.textContent = `⏳ Processing ${rows.length} videos...`;
+        let successCount = 0, failCount = 0, failList = [];
+        for (let i = 0; i < rows.length; i++) {
+            progressEl.textContent = `⏳ Processing ${i+1} / ${rows.length}...`;
+            const result = await processVideoData(rows[i]);
+            if (result && result.success) successCount++;
+            else if (result) { failCount++; failList.push(`${result.title} (${result.error})`); }
+        }
+        progressEl.style.display = 'none';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `✅ Upload Complete!<br>📹 ${successCount} videos added.<br>${failCount > 0 ? `⚠️ ${failCount} failed.` : ''}`;
+        if (failList.length > 0) console.warn('Failed:', failList);
+        await loadVideos();
+    } catch (error) {
+        progressEl.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    }
 }
 
 // ============================================
