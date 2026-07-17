@@ -577,10 +577,6 @@ function initSecretAdmin() {
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 3
 // ============================================
 
-// ============================================
-// TrendyReels - V3.5.1 (UPDATED PART 3) - PART 3
-// ============================================
-
 function loadPapaParse() {
     return new Promise((resolve) => {
         if (window.Papa) { resolve(); return; }
@@ -621,9 +617,8 @@ async function ensureCategory(categoryName) {
     }
 }
 
-// ✅ یہاں ایک خالی لائن ہے تاکہ فنکشنز الگ الگ رہیں
-
-async function processVideoData(videoData) {
+// ✅ UPDATED: Dry Run support added
+async function processVideoData(videoData, dryRun = false) {
     let url = null, title = null, category = null;
     for (const [key, value] of Object.entries(videoData)) {
         const keyLower = key.toLowerCase();
@@ -668,6 +663,21 @@ async function processVideoData(videoData) {
             if (t.includes(kw)) { isCopyrightFree = true; break; }
         }
     }
+
+    // ✅ اگر dryRun ہے تو Supabase میں سیو نہ کریں، صرف ڈیٹا واپس کریں
+    if (dryRun) {
+        return {
+            title: title,
+            embed_code: embedCode,
+            url: finalUrl,
+            category: assignedCategory,
+            is_copyright_free: isCopyrightFree,
+            published: true,
+            thumbnail: thumbnail
+        };
+    }
+
+    // اگر dryRun نہیں ہے تو Supabase میں سیو کریں
     try {
         const { data, error } = await supabase
             .from('videos')
@@ -682,7 +692,7 @@ async function processVideoData(videoData) {
                 thumbnail: thumbnail
             }, { onConflict: 'url' });
         if (error) throw error;
-        return { success: true, title }; // ✅ یہ لائن ضروری ہے
+        return { success: true, title };
     } catch (error) {
         console.error('Supabase Error:', error);
         return { success: false, title, error: error.message };
@@ -708,7 +718,7 @@ function autoConvertUrlToEmbed(url) {
         return `<iframe width="560" height="315" src="https://www.dailymotion.com/embed/video/${id}" frameborder="0" allowfullscreen></iframe>`;
     }
     return `<video controls src="${url}" style="width:100%;"></video>`;
-            }
+}
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 4
@@ -886,7 +896,7 @@ async function handleBulkUpload(file) {
         // ہر ویڈیو کو پروسیس کریں اور ایک عارضی لسٹ بنائیں
         const processedVideos = [];
         for (let i = 0; i < rows.length; i++) {
-            const result = await processVideoData(rows[i]);
+            const result = await processVideoData(rows[i], true); // dryRun = true
             if (result) processedVideos.push(result);
         }
 
@@ -1000,4 +1010,99 @@ function showReviewPanel(videos) {
 
     // Modal دکھائیں
     modal.classList.add('active');
+}
+
+// 3. Upgraded processVideoData (YouTube Title Fetch کے ساتھ)
+async function processVideoData(videoData, dryRun = false) {
+    let url = null, title = null, category = null;
+    for (const [key, value] of Object.entries(videoData)) {
+        const keyLower = key.toLowerCase();
+        if (value && typeof value === 'string' && value.trim().replace(/\s/g, '').startsWith('http')) {
+            url = value.trim();
+        }
+        if (!title && (keyLower.includes('title') || keyLower.includes('name') || keyLower.includes('caption'))) {
+            title = value.trim();
+        }
+        if (!category && (keyLower.includes('category') || keyLower.includes('cat'))) {
+            category = value.trim();
+        }
+    }
+    if (!url) {
+        for (const value of Object.values(videoData)) {
+            if (typeof value === 'string' && (value.trim().replace(/\s/g, '').startsWith('<iframe') || value.trim().replace(/\s/g, '').startsWith('<video'))) {
+                url = value.trim();
+                break;
+            }
+        }
+    }
+    if (!url) return null;
+    let embedCode = '', finalUrl = '';
+    if (url.trim().startsWith('<iframe') || url.trim().startsWith('<video') || url.trim().startsWith('<blockquote')) {
+        embedCode = url.trim();
+    } else {
+        finalUrl = url;
+        embedCode = autoConvertUrlToEmbed(url);
+    }
+
+    // ✅ NEW: اگر URL YouTube کا ہے اور title نہیں ہے، تو خود بخود ٹائٹل فیچ کریں
+    if (!title && url.includes('youtube.com/watch?v=')) {
+        try {
+            const videoId = url.split('v=')[1]?.split('&')[0];
+            const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet&key=AIzaSyA-jjRqRwtyqk5lR0yIrqH7yI0jlW0t3g4`);
+            const data = await response.json();
+            if (data.items && data.items[0]) {
+                title = data.items[0].snippet.title;
+            }
+        } catch (e) {
+            console.warn('Could not fetch YouTube title:', e);
+        }
+    }
+    
+    if (!title) title = 'Untitled Video';
+    const assignedCategory = await ensureCategory(category ? category.trim() : 'General');
+    let thumbnail = '';
+    if (embedCode.includes('youtube.com/embed/')) {
+        const id = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+        if (id) thumbnail = `https://img.youtube.com/vi/${id[1]}/hqdefault.jpg`;
+    }
+    const freeKeywords = ['copyright free', 'no copyright', 'creative commons', 'cc0', 'royalty free'];
+    let isCopyrightFree = false;
+    if (title) {
+        const t = title.toLowerCase();
+        for (const kw of freeKeywords) {
+            if (t.includes(kw)) { isCopyrightFree = true; break; }
+        }
+    }
+
+    if (dryRun) {
+        return {
+            title: title,
+            embed_code: embedCode,
+            url: finalUrl,
+            category: assignedCategory,
+            is_copyright_free: isCopyrightFree,
+            published: true,
+            thumbnail: thumbnail
+        };
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('videos')
+            .upsert({ 
+                title: title,
+                embed_code: embedCode,
+                url: finalUrl,
+                category: assignedCategory,
+                source: 'manual',
+                is_copyright_free: isCopyrightFree,
+                published: true,
+                thumbnail: thumbnail
+            }, { onConflict: 'url' });
+        if (error) throw error;
+        return { success: true, title };
+    } catch (error) {
+        console.error('Supabase Error:', error);
+        return { success: false, title, error: error.message };
+    }
         }
