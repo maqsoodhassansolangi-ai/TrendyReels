@@ -1106,3 +1106,116 @@ async function processVideoData(videoData, dryRun = false) {
         return { success: false, title, error: error.message };
     }
         }
+
+// ============================================
+// TrendyReels - V3.6.1 (Category Manager) - PART 6
+// ============================================
+
+// 🆕 NEW: Category Manager Functions
+function renderCategoryList() {
+    const list = document.getElementById('categoryList');
+    if (!list) return;
+    
+    list.innerHTML = state.categories.map(cat => {
+        const count = state.videos.filter(v => v.category === cat.name).length;
+        // Simple emoji icon based on category name
+        const icon = getCategoryIcon(cat.name);
+        return `
+            <div class="category-item" data-id="${cat.id}" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border:1px solid #ddd; border-radius:5px; background:#f9f9f9; margin-bottom:4px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.2rem;">${icon}</span>
+                    <span style="font-weight:500;">${cat.name}</span>
+                    <span style="font-size:0.85rem; color:#888;">(${count} videos)</span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button class="edit-category-btn" data-id="${cat.id}" style="padding:4px 10px; border:none; border-radius:4px; background:#2196F3; color:white; cursor:pointer;">Edit</button>
+                    <button class="delete-category-btn" data-id="${cat.id}" style="padding:4px 10px; border:none; border-radius:4px; background:#f44336; color:white; cursor:pointer;">Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Add event listeners for Edit and Delete
+    list.querySelectorAll('.edit-category-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = parseInt(this.dataset.id);
+            const cat = state.categories.find(c => c.id === id);
+            if (!cat) return;
+            const newName = prompt('Enter new category name:', cat.name);
+            if (newName && newName.trim() !== '') {
+                await updateCategory(id, newName.trim());
+            }
+        });
+    });
+
+    list.querySelectorAll('.delete-category-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = parseInt(this.dataset.id);
+            const cat = state.categories.find(c => c.id === id);
+            if (!cat) return;
+            if (confirm(`Are you sure you want to delete "${cat.name}"?`)) {
+                await deleteCategory(id);
+            }
+        });
+    });
+}
+
+function getCategoryIcon(name) {
+    const icons = {
+        'Cricket': '🏏', 'News': '📰', 'Islamic': '🕌', 'Technology': '💻',
+        'Comedy': '😂', 'Sports': '⚽', 'Education': '📚', 'Fitness-Fashion': '💪',
+        'Music': '🎵', 'General': '📁'
+    };
+    return icons[name] || '📁';
+}
+
+async function addCategory(name) {
+    if (!name || name.trim() === '') return;
+    try {
+        const newCat = await supabase.post('categories', { name: name.trim() });
+        await loadCategories();
+        renderCategoryList();
+        document.getElementById('newCategoryInput').value = '';
+    } catch (error) {
+        alert('Error adding category: ' + error.message);
+    }
+}
+
+async function updateCategory(id, newName) {
+    try {
+        await supabase.patch('categories', { name: newName }, id);
+        await loadCategories();
+        renderCategoryList();
+    } catch (error) {
+        alert('Error updating category: ' + error.message);
+    }
+}
+
+async function deleteCategory(id) {
+    try {
+        await supabase.delete('categories', id);
+        await loadCategories();
+        renderCategoryList();
+    } catch (error) {
+        alert('Error deleting category: ' + error.message);
+    }
+}
+
+// 🆕 Update loadCategories to call renderCategoryList
+const originalLoadCategories = loadCategories;
+loadCategories = async function() {
+    await originalLoadCategories();
+    renderCategoryList();
+};
+
+// 🆕 Attach event listener for Add Category button
+document.addEventListener('DOMContentLoaded', () => {
+    const addBtn = document.getElementById('addCategoryBtn');
+    const input = document.getElementById('newCategoryInput');
+    if (addBtn && input) {
+        addBtn.addEventListener('click', () => addCategory(input.value));
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addCategory(input.value);
+        });
+    }
+});
