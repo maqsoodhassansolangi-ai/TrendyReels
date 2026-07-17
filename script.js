@@ -1219,3 +1219,71 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ============================================
+// V3.7.0 - RSS Pending System (NEW ADDITIONS ONLY)
+// ============================================
+
+async function loadPendingVideos() {
+    try {
+        const data = await supabase.get('videos', { select: '*', published: 'eq.false' });
+        state.pendingVideos = data || [];
+        renderPendingVideos();
+        return data;
+    } catch (error) {
+        console.error('Error loading pending videos:', error);
+        return [];
+    }
+}
+
+function renderPendingVideos() {
+    const container = document.getElementById('pendingVideoList');
+    if (!container) return;
+
+    if (state.pendingVideos.length === 0) {
+        container.innerHTML = `<p style="color:#888; text-align:center; padding:20px;">No pending videos found. RSS feed will fetch new videos soon.</p>`;
+        return;
+    }
+
+    container.innerHTML = state.pendingVideos.map(video => `
+        <div class="pending-video-item" data-id="${video.id}" style="display:flex; align-items:center; gap:15px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; margin-bottom:8px;">
+            <img src="${getThumbnail(video.embed_code)}" style="width:80px; height:45px; object-fit:cover; border-radius:4px;" onerror="this.src='https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'">
+            <div style="flex:1;">
+                <div style="font-weight:500; font-size:0.95rem;">${video.title || 'Untitled Video'}</div>
+                <div style="font-size:0.8rem; color:#888;">${video.category || 'Uncategorized'} • ${new Date(video.created_at).toLocaleDateString()}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="approve-pending-btn" data-id="${video.id}" style="padding:6px 14px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;">✅ Approve</button>
+                <button class="delete-pending-btn" data-id="${video.id}" style="padding:6px 14px; background:#f44336; color:white; border:none; border-radius:4px; cursor:pointer;">🗑 Delete</button>
+            </div>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.approve-pending-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = parseInt(this.dataset.id);
+            await approvePendingVideo(id);
+        });
+    });
+
+    container.querySelectorAll('.delete-pending-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = parseInt(this.dataset.id);
+            if (confirm('Delete this pending video?')) {
+                await deleteVideo(id);
+                await loadPendingVideos();
+            }
+        });
+    });
+}
+
+async function approvePendingVideo(id) {
+    try {
+        await supabase.patch('videos', { published: true }, id);
+        await loadPendingVideos();
+        await loadVideos();
+        alert('✅ Video approved and published!');
+    } catch (error) {
+        alert('❌ Error approving video: ' + error.message);
+    }
+}
