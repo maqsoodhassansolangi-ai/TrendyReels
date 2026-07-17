@@ -894,3 +894,171 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+
+// ============================================
+// TrendyReels - V3.5.1 (Pre-Save Review Panel) - PART 1
+// ============================================
+
+// (پورا V3.4.1 کا موجودہ کوڈ بالکل ویسے ہی رہے گا — یہاں صرف نئے حصے شامل کیے جا رہے ہیں)
+// ... (آپ کا موجودہ V3.4.1 کا پورا کوڈ یہاں آتا ہے) ...
+
+// ============================================
+// 🆕 NEW: Pre-Save Review Panel (V3.5.1)
+// ============================================
+
+// 1. Review Panel لاجک (فائل اپ لوڈ ہونے کے بعد کھلے گا)
+async function handleBulkUpload(file) {
+    if (!file) { alert('Please select a file first.'); return; }
+    const progressEl = document.getElementById('uploadProgress');
+    const resultEl = document.getElementById('uploadResult');
+    progressEl.style.display = 'block';
+    progressEl.textContent = '📂 Reading file...';
+    resultEl.style.display = 'none';
+
+    try {
+        await loadPapaParse();
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+            rows = parsed.data;
+        } else if (file.name.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            rows = Array.isArray(json) ? json : [json];
+        } else {
+            alert('Only .csv and .json files are supported.');
+            progressEl.style.display = 'none';
+            return;
+        }
+        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
+
+        // ہر ویڈیو کو پروسیس کریں اور ایک عارضی لسٹ بنائیں
+        const processedVideos = [];
+        for (let i = 0; i < rows.length; i++) {
+            const result = await processVideoData(rows[i], true); // true = dry run
+            if (result) processedVideos.push(result);
+        }
+
+        if (processedVideos.length === 0) {
+            alert('No valid videos found in the file.');
+            progressEl.style.display = 'none';
+            return;
+        }
+
+        // Review Panel دکھائیں
+        showReviewPanel(processedVideos);
+        progressEl.style.display = 'none';
+    } catch (error) {
+        progressEl.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    }
+}
+
+// 2. Review Panel دکھانے کا فنکشن
+function showReviewPanel(videos) {
+    const modal = document.getElementById('reviewPanelModal');
+    const list = document.getElementById('reviewPanelList');
+    const title = document.getElementById('reviewPanelTitle');
+    title.textContent = `Review Videos (${videos.length})`;
+    
+    list.innerHTML = videos.map((v, index) => {
+        const thumbnail = v.thumbnail || 'https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg';
+        return `
+            <div class="review-item" data-index="${index}" style="display:flex; align-items:center; gap:15px; padding:10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9;">
+                <img src="${thumbnail}" style="width:120px; height:68px; object-fit:cover; border-radius:4px;" onerror="this.src='https://images.pexels.com/photos/3200072/pexels-photo-3200072.jpeg'">
+                <div style="flex:1;">
+                    <div style="font-weight:500; font-size:0.95rem; margin-bottom:4px;">${v.title}</div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <label style="font-size:0.85rem;">Category:</label>
+                        <select class="review-category" data-index="${index}" style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:0.85rem;">
+                            ${state.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+                        </select>
+                        <label style="font-size:0.85rem; margin-left:10px;">
+                            <input type="checkbox" class="review-approve" data-index="${index}" checked> Approve
+                        </label>
+                        <button class="review-remove" data-index="${index}" style="padding:4px 12px; background:#f44336; color:white; border:none; border-radius:4px; cursor:pointer;">🗑 Remove</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Remove بٹن کا ایونٹ
+    list.querySelectorAll('.review-remove').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const item = this.closest('.review-item');
+            item.remove();
+            // اگر سب ہٹا دیا تو سیو بٹن چھپا دیں
+            if (list.children.length === 0) {
+                document.getElementById('reviewPanelSave').style.display = 'none';
+            }
+        });
+    });
+
+    // Save بٹن
+    document.getElementById('reviewPanelSave').onclick = async () => {
+        const toSave = [];
+        document.querySelectorAll('.review-item').forEach(item => {
+            const idx = parseInt(item.dataset.index);
+            const isApproved = item.querySelector('.review-approve').checked;
+            const category = item.querySelector('.review-category').value;
+            if (isApproved) {
+                const v = videos[idx];
+                toSave.push({ ...v, category });
+            }
+        });
+
+        if (toSave.length === 0) {
+            alert('No videos selected to save.');
+            return;
+        }
+
+        // Supabase میں محفوظ کریں
+        let successCount = 0, failCount = 0, failList = [];
+        for (const v of toSave) {
+            try {
+                const { error } = await supabase
+                    .from('videos')
+                    .upsert(v, { onConflict: 'url' });
+                if (error) throw error;
+                successCount++;
+            } catch (e) {
+                failCount++;
+                failList.push(`${v.title} (${e.message})`);
+            }
+        }
+
+        alert(`✅ ${successCount} videos saved successfully!${failCount > 0 ? `\n⚠️ ${failCount} failed.` : ''}`);
+        if (failList.length > 0) console.warn('Failed:', failList);
+        await loadVideos();
+        modal.classList.remove('active');
+    };
+
+    // Cancel بٹن
+    document.getElementById('reviewPanelCancel').onclick = () => {
+        if (confirm('Are you sure you want to cancel? No videos will be saved.')) {
+            modal.classList.remove('active');
+        }
+    };
+
+    // Close بٹن
+    document.getElementById('closeReviewPanel').onclick = () => {
+        if (confirm('Are you sure you want to close? No videos will be saved.')) {
+            modal.classList.remove('active');
+        }
+    };
+
+    // Modal دکھائیں
+    modal.classList.add('active');
+}
+
+// 3. processVideoData میں معمولی تبدیلی (Dry Run سپورٹ)
+async function processVideoData(videoData, dryRun = false) {
+    // ... (V3.4.1 کا موجودہ processVideoData لاجک)
+    // اس میں صرف اتنا اضافہ کریں کہ اگر dryRun ہے تو Supabase میں نہ ڈالیں
+    // اور thumbnail کو بھی ریٹرن کریں
+}
+
+// 4. موجودہ handleBulkUpload کو اوور رائٹ کرنے کے لیے، اسے نئے ورژن سے بدل دیں
+// (یہاں پرانا handleBulkUpload ہٹا کر نیا لگا دیں — اوپر دیا گیا ہے)
