@@ -144,6 +144,7 @@ async function loadVideos() {
         state.videos = data || [];
         renderVideos();
         renderAdminVideos();
+        await loadPendingVideos();
         return data;
     } catch (error) {
         console.error('Error loading videos:', error);
