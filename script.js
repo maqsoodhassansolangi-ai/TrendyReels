@@ -810,6 +810,14 @@ async function init() {
             $(`#${tab.dataset.tab}Tab`).classList.add('active');
         });
     });
+    // ✅ Pending tab click handler
+document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        if (this.dataset.tab === 'pending') {
+            loadPendingVideos();
+        }
+    });
+});
     const addVideoBtn = $('#addVideoBtn');
     const addModal = $('#addVideoModal');
     if (addVideoBtn && addModal) {
