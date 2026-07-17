@@ -577,6 +577,10 @@ function initSecretAdmin() {
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 3
 // ============================================
 
+ // ============================================
+// TrendyReels - V3.4.1 (FRESH PART 3) - PART 3
+// ============================================
+
 function loadPapaParse() {
     return new Promise((resolve) => {
         if (window.Papa) { resolve(); return; }
@@ -590,10 +594,29 @@ function loadPapaParse() {
 async function ensureCategory(categoryName) {
     if (!categoryName) return 'General';
     try {
-        const existing = await supabase.get('categories', { name: categoryName });
-        if (existing && existing.length > 0) return existing[0].name;
-        const newCat = await supabase.post('categories', { name: categoryName });
-        return newCat[0]?.name || 'General';
+        // ✅ درست طریقہ: سیدھا fetch استعمال کریں
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?name=eq.${encodeURIComponent(categoryName)}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const data = await response.json();
+        if (data && data.length > 0) return data[0].name;
+
+        // اگر موجود نہیں، تو نئی بنائیں
+        const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ name: categoryName })
+        });
+        const newData = await insertResponse.json();
+        return newData[0]?.name || 'General';
     } catch (error) {
         console.error('Error ensuring category:', error);
         return 'General';
@@ -685,6 +708,50 @@ function autoConvertUrlToEmbed(url) {
         return `<iframe width="560" height="315" src="https://www.dailymotion.com/embed/video/${id}" frameborder="0" allowfullscreen></iframe>`;
     }
     return `<video controls src="${url}" style="width:100%;"></video>`;
+}
+
+async function handleBulkUpload(file) {
+    if (!file) { alert('Please select a file first.'); return; }
+    const progressEl = document.getElementById('uploadProgress');
+    const resultEl = document.getElementById('uploadResult');
+    progressEl.style.display = 'block';
+    progressEl.textContent = '📂 Reading file...';
+    resultEl.style.display = 'none';
+    try {
+        await loadPapaParse();
+        let rows = [];
+        if (file.name.endsWith('.csv')) {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+            rows = parsed.data;
+        } else if (file.name.endsWith('.json')) {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            rows = Array.isArray(json) ? json : [json];
+        } else {
+            alert('Only .csv and .json files are supported.');
+            progressEl.style.display = 'none';
+            return;
+        }
+        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
+        progressEl.textContent = `⏳ Processing ${rows.length} videos...`;
+        let successCount = 0, failCount = 0, failList = [];
+        for (let i = 0; i < rows.length; i++) {
+            progressEl.textContent = `⏳ Processing ${i+1} / ${rows.length}...`;
+            const result = await processVideoData(rows[i]);
+            if (result && result.success) successCount++;
+            else if (result) { failCount++; failList.push(`${result.title} (${result.error})`); }
+        }
+        progressEl.style.display = 'none';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `✅ Upload Complete!<br>📹 ${successCount} videos added.<br>${failCount > 0 ? `⚠️ ${failCount} failed.` : ''}`;
+        if (failList.length > 0) console.warn('Failed:', failList);
+        await loadVideos();
+    } catch (error) {
+        progressEl.style.display = 'none';
+        alert(`❌ Error: ${error.message}`);
+    }
+}
                                                                        }
 
 // ============================================
