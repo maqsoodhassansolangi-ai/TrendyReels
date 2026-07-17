@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - V3.6.1</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="admin-header">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <span class="logo-icon">▶</span>
+                <span class="logo-text">TrendyReels Admin</span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="adminThemeToggle" aria-label="Toggle theme">🌙</button>
+        </div>
+    </header>
+
+    <nav class="admin-nav">
+        <button class="admin-tab active" data-tab="videos">📹 Videos</button>
+        <button class="admin-tab" data-tab="ads">📢 Ads</button>
+        <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
+        <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
+    </nav>
+
+    <main class="admin-content">
+        <!-- Videos Tab -->
+        <section id="videosTab" class="admin-tab-content active">
+            <div class="admin-actions">
+                <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
+                <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
+                <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
+                
+                <!-- 3 Bot Buttons -->
+                <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
+                    <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white; flex:1; min-width:100px;">▶ YouTube</button>
+                    <button id="runPixabayBot" class="btn-secondary" style="background:#25D366; color:white; flex:1; min-width:100px;">▶ Pixabay</button>
+                    <button id="runDailymotionBot" class="btn-secondary" style="background:#0066ff; color:white; flex:1; min-width:100px;">▶ Dailymotion</button>
+                </div>
+
+                <!-- Bulk Upload Section -->
+                <div style="width:100%; margin-top:15px; border-top:2px solid #eee; padding-top:15px;">
+                    <h3 style="margin-bottom:10px;">📁 Bulk Upload (CSV / JSON)</h3>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="file" id="bulkFileInput" accept=".csv,.json" style="padding:10px; border:1px solid #ccc; border-radius:5px; background:#fff;">
+                        <button id="uploadBulkBtn" class="btn-primary" style="width:100%;">🚀 Upload & Process</button>
+                        <div id="uploadProgress" style="font-size:0.9rem; color:#666; display:none;">Processing...</div>
+                        <div id="uploadResult" style="font-size:0.9rem; color:#4CAF50; display:none;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr><th><input type="checkbox" id="selectAll"></th><th>Title</th><th>Category</th><th>Embed</th><th>Copyright</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="adminVideoTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Ads Tab -->
+        <section id="adsTab" class="admin-tab-content">
+            <h2>Adsterra Ad Manager</h2>
+            <div class="ad-slots-grid" id="adSlotsGrid"></div>
+        </section>
+
+        <!-- 🆕 NEW: Categories Tab -->
+        <section id="categoriesTab" class="admin-tab-content">
+            <h2>🏷️ Category Manager</h2>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="newCategoryInput" placeholder="Enter new category name..." style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                <button id="addCategoryBtn" class="btn-primary">➕ Add</button>
+            </div>
+            <div id="categoryList" style="display:flex; flex-direction:column; gap:8px;">
+                <!-- Rendered by JS -->
+            </div>
+        </section>
+
+        <!-- Settings Tab -->
+        <section id="settingsTab" class="admin-tab-content">
+            <h2>Settings</h2>
+            <div class="settings-card">
+                <h3>Theme Preference</h3>
+                <label class="toggle-switch"><input type="checkbox" id="adminThemeSwitch"><span class="slider"></span></label>
+                <span>Dark Mode</span>
+            </div>
+            <div class="settings-card">
+                <h3>Site Information</h3>
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Total Videos:</strong> <span id="totalVideosCount">0</span></p>
+                <p><strong>Database:</strong> Supabase (Connected)</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add Video Modal -->
+    <div id="addVideoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Add New Video</h2>
+            <form id="addVideoForm">
+                <div class="form-group">
+                    <label for="videoEmbed">Embed Code (YouTube/Dailymotion)</label>
+                    <textarea id="videoEmbed" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="videoCategory">Category</label>
+                    <select id="videoCategory" required></select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="videoCopyrightFree"> Copyright Free</label>
+                </div>
+                <button type="submit" class="btn-primary">Add Video</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Panel Modal -->
+    <div id="reviewPanelModal" class="modal">
+        <div class="modal-content" style="max-width:900px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 id="reviewPanelTitle">Review Videos</h2>
+                <button id="closeReviewPanel" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="reviewPanelList" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button id="reviewPanelSave" class="btn-primary">💾 Save Selected</button>
+                <button id="reviewPanelCancel" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
