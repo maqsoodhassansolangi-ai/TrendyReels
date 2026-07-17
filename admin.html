@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - V3.6.1</title>
+    <title>Admin Panel - V3.7.0</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 </head>
@@ -22,6 +22,7 @@
 
     <nav class="admin-nav">
         <button class="admin-tab active" data-tab="videos">📹 Videos</button>
+        <button class="admin-tab" data-tab="pending">⏳ Pending</button>
         <button class="admin-tab" data-tab="ads">📢 Ads</button>
         <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
@@ -64,13 +65,21 @@
             </div>
         </section>
 
+        <!-- Pending Tab (NEW) -->
+        <section id="pendingTab" class="admin-tab-content">
+            <h2>⏳ Pending Videos (RSS Auto-Fetched)</h2>
+            <div id="pendingVideoList" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Rendered by JS -->
+            </div>
+        </section>
+
         <!-- Ads Tab -->
         <section id="adsTab" class="admin-tab-content">
             <h2>Adsterra Ad Manager</h2>
             <div class="ad-slots-grid" id="adSlotsGrid"></div>
         </section>
 
-        <!-- 🆕 NEW: Categories Tab -->
+        <!-- Categories Tab -->
         <section id="categoriesTab" class="admin-tab-content">
             <h2>🏷️ Category Manager</h2>
             <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -138,4 +147,4 @@
 
     <script src="script.js"></script>
 </body>
-</html>
+    </html>
