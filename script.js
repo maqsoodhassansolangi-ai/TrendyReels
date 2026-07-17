@@ -578,7 +578,7 @@ function initSecretAdmin() {
 // ============================================
 
 // ============================================
-// TrendyReels - V3.4.1 (FINAL WORKING PART 3)
+// TrendyReels - V3.5.1 (UPDATED PART 3) - PART 3
 // ============================================
 
 function loadPapaParse() {
@@ -603,7 +603,6 @@ async function ensureCategory(categoryName) {
         const data = await response.json();
         if (data && data.length > 0) return data[0].name;
 
-        // اگر موجود نہیں، تو نئی بنائیں
         const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
             method: 'POST',
             headers: {
@@ -683,9 +682,9 @@ async function processVideoData(videoData) {
                 thumbnail: thumbnail
             }, { onConflict: 'url' });
         if (error) throw error;
-        return { success: true, title };
+        return { success: true, title }; // ✅ یہ لائن ضروری ہے
     } catch (error) {
-        // ❌ یہ لائن ہٹا دی گئی ہے تاکہ کوئی ایرر کنسول میں نہ آئے
+        console.error('Supabase Error:', error);
         return { success: false, title, error: error.message };
     }
 }
@@ -709,50 +708,7 @@ function autoConvertUrlToEmbed(url) {
         return `<iframe width="560" height="315" src="https://www.dailymotion.com/embed/video/${id}" frameborder="0" allowfullscreen></iframe>`;
     }
     return `<video controls src="${url}" style="width:100%;"></video>`;
-}
-
-async function handleBulkUpload(file) {
-    if (!file) { alert('Please select a file first.'); return; }
-    const progressEl = document.getElementById('uploadProgress');
-    const resultEl = document.getElementById('uploadResult');
-    progressEl.style.display = 'block';
-    progressEl.textContent = '📂 Reading file...';
-    resultEl.style.display = 'none';
-    try {
-        await loadPapaParse();
-        let rows = [];
-        if (file.name.endsWith('.csv')) {
-            const text = await file.text();
-            const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
-            rows = parsed.data;
-        } else if (file.name.endsWith('.json')) {
-            const text = await file.text();
-            const json = JSON.parse(text);
-            rows = Array.isArray(json) ? json : [json];
-        } else {
-            alert('Only .csv and .json files are supported.');
-            progressEl.style.display = 'none';
-            return;
-        }
-        if (rows.length === 0) { alert('File is empty.'); progressEl.style.display = 'none'; return; }
-        progressEl.textContent = `⏳ Processing ${rows.length} videos...`;
-        let successCount = 0, failCount = 0, failList = [];
-        for (let i = 0; i < rows.length; i++) {
-            progressEl.textContent = `⏳ Processing ${i+1} / ${rows.length}...`;
-            const result = await processVideoData(rows[i]);
-            if (result && result.success) successCount++;
-            else if (result) { failCount++; failList.push(`${result.title} (${result.error})`); }
-        }
-        progressEl.style.display = 'none';
-        resultEl.style.display = 'block';
-        resultEl.innerHTML = `✅ Upload Complete!<br>📹 ${successCount} videos added.<br>${failCount > 0 ? `⚠️ ${failCount} failed.` : ''}`;
-        if (failList.length > 0) console.warn('Failed:', failList);
-        await loadVideos();
-    } catch (error) {
-        progressEl.style.display = 'none';
-        alert(`❌ Error: ${error.message}`);
-    }
-    }
+            }
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 4
@@ -895,15 +851,9 @@ if (document.readyState === 'loading') {
 
 window.deleteVideo = deleteVideo;
 
-// ============================================
-// TrendyReels - V3.5.1 (Pre-Save Review Panel) - PART 1
-// ============================================
-
-// (پورا V3.4.1 کا موجودہ کوڈ بالکل ویسے ہی رہے گا — یہاں صرف نئے حصے شامل کیے جا رہے ہیں)
-// ... (آپ کا موجودہ V3.4.1 کا پورا کوڈ یہاں آتا ہے) ...
 
 // ============================================
-// 🆕 NEW: Pre-Save Review Panel (V3.5.1)
+// TrendyReels - V3.5.1 (PART 6 - NEW REVIEW PANEL)
 // ============================================
 
 // 1. Review Panel لاجک (فائل اپ لوڈ ہونے کے بعد کھلے گا)
@@ -936,7 +886,7 @@ async function handleBulkUpload(file) {
         // ہر ویڈیو کو پروسیس کریں اور ایک عارضی لسٹ بنائیں
         const processedVideos = [];
         for (let i = 0; i < rows.length; i++) {
-            const result = await processVideoData(rows[i], true); // true = dry run
+            const result = await processVideoData(rows[i]);
             if (result) processedVideos.push(result);
         }
 
@@ -989,7 +939,6 @@ function showReviewPanel(videos) {
         btn.addEventListener('click', function() {
             const item = this.closest('.review-item');
             item.remove();
-            // اگر سب ہٹا دیا تو سیو بٹن چھپا دیں
             if (list.children.length === 0) {
                 document.getElementById('reviewPanelSave').style.display = 'none';
             }
@@ -1051,14 +1000,4 @@ function showReviewPanel(videos) {
 
     // Modal دکھائیں
     modal.classList.add('active');
-}
-
-// 3. processVideoData میں معمولی تبدیلی (Dry Run سپورٹ)
-async function processVideoData(videoData, dryRun = false) {
-    // ... (V3.4.1 کا موجودہ processVideoData لاجک)
-    // اس میں صرف اتنا اضافہ کریں کہ اگر dryRun ہے تو Supabase میں نہ ڈالیں
-    // اور thumbnail کو بھی ریٹرن کریں
-}
-
-// 4. موجودہ handleBulkUpload کو اوور رائٹ کرنے کے لیے، اسے نئے ورژن سے بدل دیں
-// (یہاں پرانا handleBulkUpload ہٹا کر نیا لگا دیں — اوپر دیا گیا ہے)
+        }
