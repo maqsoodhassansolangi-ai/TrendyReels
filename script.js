@@ -578,7 +578,7 @@ function initSecretAdmin() {
 // ============================================
 
  // ============================================
-// TrendyReels - V3.4.1 (FRESH PART 3) - PART 3
+// TrendyReels - V3.4.1 (PART 3 - FINAL FIX)
 // ============================================
 
 function loadPapaParse() {
@@ -594,7 +594,6 @@ function loadPapaParse() {
 async function ensureCategory(categoryName) {
     if (!categoryName) return 'General';
     try {
-        // ✅ درست طریقہ: سیدھا fetch استعمال کریں
         const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?name=eq.${encodeURIComponent(categoryName)}`, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -604,7 +603,6 @@ async function ensureCategory(categoryName) {
         const data = await response.json();
         if (data && data.length > 0) return data[0].name;
 
-        // اگر موجود نہیں، تو نئی بنائیں
         const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
             method: 'POST',
             headers: {
@@ -622,6 +620,8 @@ async function ensureCategory(categoryName) {
         return 'General';
     }
 }
+
+// ✅ یہاں ایک خالی لائن شامل کی گئی ہے تاکہ فنکشنز الگ الگ رہیں
 
 async function processVideoData(videoData) {
     let url = null, title = null, category = null;
@@ -751,8 +751,7 @@ async function handleBulkUpload(file) {
         progressEl.style.display = 'none';
         alert(`❌ Error: ${error.message}`);
     }
-}
-                                                                       }
+    }                                                                      }
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 4
