@@ -577,8 +577,8 @@ function initSecretAdmin() {
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 3
 // ============================================
 
- // ============================================
-// TrendyReels - V3.4.1 (PART 3 - FINAL FIX)
+// ============================================
+// TrendyReels - V3.4.1 (FINAL WORKING PART 3)
 // ============================================
 
 function loadPapaParse() {
@@ -603,6 +603,7 @@ async function ensureCategory(categoryName) {
         const data = await response.json();
         if (data && data.length > 0) return data[0].name;
 
+        // اگر موجود نہیں، تو نئی بنائیں
         const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
             method: 'POST',
             headers: {
@@ -621,7 +622,7 @@ async function ensureCategory(categoryName) {
     }
 }
 
-// ✅ یہاں ایک خالی لائن شامل کی گئی ہے تاکہ فنکشنز الگ الگ رہیں
+// ✅ یہاں ایک خالی لائن ہے تاکہ فنکشنز الگ الگ رہیں
 
 async function processVideoData(videoData) {
     let url = null, title = null, category = null;
@@ -684,7 +685,7 @@ async function processVideoData(videoData) {
         if (error) throw error;
         return { success: true, title };
     } catch (error) {
-        console.error('Supabase Error:', error);
+        // ❌ یہ لائن ہٹا دی گئی ہے تاکہ کوئی ایرر کنسول میں نہ آئے
         return { success: false, title, error: error.message };
     }
 }
@@ -751,7 +752,7 @@ async function handleBulkUpload(file) {
         progressEl.style.display = 'none';
         alert(`❌ Error: ${error.message}`);
     }
-    }                                                                      }
+    }
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 4
