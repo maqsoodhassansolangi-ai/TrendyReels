@@ -784,6 +784,7 @@ async function init() {
     await loadVideos();
     // loadVideos کے اندر شامل کریں:
 loadBulkCategoryDropdown();
+    loadBulkDeleteDropdown();
     await loadAdSlots();
     initSecretAdmin();
     const searchInput = $('#searchInput');
@@ -863,15 +864,14 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+
 // ============================================
-// Bulk Category Assign (New Module)
+// Bulk Delete by Category with Preview (New Module)
 // ============================================
 
-// Bulk Category dropdown کو لوڈ کرنا (جب ویڈیوز لوڈ ہوں تو کیٹیگریز بھی لوڈ کریں)
-function loadBulkCategoryDropdown() {
-    const select = document.getElementById('bulkCategorySelect');
+function loadBulkDeleteDropdown() {
+    const select = document.getElementById('bulkDeleteCategorySelect');
     if (!select) return;
-    // موجودہ آپشنز صاف کریں (صرف پہلا رکھیں)
     select.innerHTML = '<option value="">Select Category...</option>';
     state.categories.forEach(cat => {
         const opt = document.createElement('option');
@@ -881,43 +881,140 @@ function loadBulkCategoryDropdown() {
     });
 }
 
-// Bulk Assign Button کا ایونٹ
 document.addEventListener('DOMContentLoaded', () => {
-    const assignBtn = document.getElementById('bulkAssignCategoryBtn');
+    const select = document.getElementById('bulkDeleteCategorySelect');
+    const previewBtn = document.getElementById('previewDeleteCategoryBtn');
+    const deleteBtn = document.getElementById('bulkDeleteByCategoryBtn');
+    const previewContainer = document.getElementById('bulkDeletePreviewContainer');
+    const previewGrid = document.getElementById('bulkDeletePreviewGrid');
+
+    if (select && previewBtn && deleteBtn && previewContainer && previewGrid) {
+        // Preview Button
+        previewBtn.addEventListener('click', () => {
+            const category = select.value;
+            if (!category) { alert('Please select a category first.'); return; }
+
+            const videos = state.videos.filter(v => v.category === category);
+            if (videos.length === 0) { alert(`No videos found in "${category}"`); return; }
+
+            // دکھائیں
+            previewContainer.style.display = 'block';
+            deleteBtn.style.display = 'inline-block';
+
+            // کارڈز بنائیں
+            previewGrid.innerHTML = videos.map(v => `
+                <div style="border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
+                    <img src="${getThumbnail(v.embed_code)}" style="width:100%; height:80px; object-fit:cover;">
+                    <div style="padding:6px; font-size:0.75rem; text-align:center; font-weight:500;">${v.title || 'Untitled'}</div>
+                </div>
+            `).join('');
+        });
+
+        // Confirm Delete Button
+        deleteBtn.addEventListener('click', async () => {
+            const category = select.value;
+            if (!category) { alert('Please select a category.'); return; }
+            
+            const videos = state.videos.filter(v => v.category === category);
+            if (videos.length === 0) { alert('No videos found.'); return; }
+
+            if (!confirm(`⚠️ Are you sure you want to permanently delete ALL ${videos.length} videos seen above in the "${category}" category?`)) return;
+
+            let deletedCount = 0;
+            for (const video of videos) {
+                try {
+                    await supabase.delete('videos', video.id);
+                    deletedCount++;
+                } catch (e) { console.error('Delete error:', e); }
+            }
+
+            alert(`✅ ${deletedCount} video(s) deleted from "${category}"!`);
+            previewContainer.style.display = 'none';
+            deleteBtn.style.display = 'none';
+            previewGrid.innerHTML = '';
+            await loadVideos();
+            loadBulkDeleteDropdown();
+        });
+    }
+});
+
+// ============================================
+// Bulk Category Assign with Preview (New Module)
+// ============================================
+
+function loadBulkCategoryDropdown() {
     const select = document.getElementById('bulkCategorySelect');
-    
-    if (assignBtn && select) {
-        assignBtn.addEventListener('click', async () => {
-            // چیک شدہ ویڈیوز نکالیں
+    if (!select) return;
+    select.innerHTML = '<option value="">Select Category...</option>';
+    state.categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        select.appendChild(opt);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('bulkCategorySelect');
+    const previewBtn = document.getElementById('previewAssignBtn');
+    const assignBtn = document.getElementById('bulkAssignCategoryBtn');
+    const previewContainer = document.getElementById('bulkAssignPreviewContainer');
+    const previewGrid = document.getElementById('bulkAssignPreviewGrid');
+
+    if (select && previewBtn && assignBtn && previewContainer && previewGrid) {
+        // Preview Button
+        previewBtn.addEventListener('click', () => {
             const selected = document.querySelectorAll('.video-checkbox:checked');
             if (selected.length === 0) {
-                alert('Please select at least one video.');
+                alert('Please select at least one video from the table.');
                 return;
             }
             
+            const ids = Array.from(selected).map(cb => parseInt(cb.dataset.id));
+            const videos = state.videos.filter(v => ids.includes(v.id));
+
+            previewContainer.style.display = 'block';
+            assignBtn.style.display = 'inline-block';
+
+            previewGrid.innerHTML = videos.map(v => `
+                <div style="border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
+                    <img src="${getThumbnail(v.embed_code)}" style="width:100%; height:80px; object-fit:cover;">
+                    <div style="padding:6px; font-size:0.75rem; text-align:center; font-weight:500;">${v.title || 'Untitled'}</div>
+                </div>
+            `).join('');
+        });
+
+        // Confirm Assign Button
+        assignBtn.addEventListener('click', async () => {
             const newCategory = select.value;
             if (!newCategory) {
                 alert('Please select a category from the dropdown.');
                 return;
             }
-            
-            if (!confirm(`Assign category "${newCategory}" to ${selected.length} video(s)?`)) return;
+
+            const selected = document.querySelectorAll('.video-checkbox:checked');
+            if (selected.length === 0) {
+                alert('No videos selected. Please select again.');
+                return;
+            }
             
             const ids = Array.from(selected).map(cb => parseInt(cb.dataset.id));
+            if (!confirm(`Assign ${ids.length} video(s) to category "${newCategory}"?`)) return;
+
             let successCount = 0;
-            
             for (const id of ids) {
                 try {
                     await supabase.patch('videos', { category: newCategory }, id);
                     successCount++;
-                } catch (e) {
-                    console.error('Failed to update video:', e);
-                }
+                } catch (e) { console.error('Update error:', e); }
             }
-            
+
             alert(`✅ ${successCount} video(s) updated to "${newCategory}"!`);
-            await loadVideos(); // لسٹ ریفریش کریں
-            loadBulkCategoryDropdown(); // ڈراپ ڈاؤن ریفریش کریں
+            previewContainer.style.display = 'none';
+            assignBtn.style.display = 'none';
+            previewGrid.innerHTML = '';
+            await loadVideos();
+            loadBulkCategoryDropdown();
         });
     }
 });
