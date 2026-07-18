@@ -26,6 +26,7 @@
         <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
         <button class="admin-tab" data-tab="linkcleaner">🧹 Link Cleaner</button>
+        <button class="admin-tab" data-tab="duplicates">🔄 Duplicates</button>
     </nav>
 
     <main class="admin-content">
@@ -82,6 +83,16 @@
                 <!-- Rendered by JS -->
             </div>
         </section>
+        <!-- Duplicates Tab -->
+<section id="duplicatesTab" class="admin-tab-content">
+    <h2>🔄 Duplicate Review Panel</h2>
+    <div id="duplicateList" style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+        <!-- Rendered by JS -->
+    </div>
+    <div style="margin-top:15px;">
+        <button id="refreshDuplicatesBtn" class="btn-secondary">🔄 Refresh</button>
+    </div>
+</section>
         <!-- نیا ٹیب: Link Cleaner & Exporter -->
 <section id="linkcleanerTab" class="admin-tab-content">
     <h2>🧹 Link Cleaner & Exporter (File to File)</h2>
