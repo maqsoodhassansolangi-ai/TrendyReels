@@ -310,7 +310,9 @@ async function addVideo(formData) {
         const embedCode = formData.get('embed');
         const category = formData.get('category');
         const isCopyrightFree = formData.get('copyrightFree') === 'on';
-        let title = 'Video';
+        let title = 'Video'; // آپ کی موجودہ لائن
+// 👇 یہ لائن اس کے نیچے شامل کریں
+let suggestedCategory = autoSuggestCategory(title);
         const ytMatch = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
         if (ytMatch) {
             try {
@@ -319,7 +321,15 @@ async function addVideo(formData) {
                 if (data.items?.[0]) title = data.items[0].snippet.title;
             } catch (e) {}
         }
-        await supabase.post('videos', { title, embed_code: embedCode, category, is_copyright_free: isCopyrightFree, published: true });
+        // پرانا کوڈ: category: category,
+// نیا کوڈ (تبدیلی کریں):
+await supabase.post('videos', { 
+    title, 
+    embed_code: embedCode, 
+    category: suggestedCategory,  // ← یہ تبدیل کریں
+    is_copyright_free: isCopyrightFree, 
+    published: true 
+});
         await loadVideos();
         return true;
     } catch (error) { return false; }
