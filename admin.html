@@ -85,7 +85,45 @@
                     </div>
                 </div>
             </div>
+            <!-- Smart Filter Bot -->
+<div style="margin-top:20px; border-top:1px solid #ddd; padding-top:15px;">
+    <button id="openSmartFilterBtn" class="btn-secondary">🔍 Smart Filter</button>
+    
+    <div id="smartFilterPanel" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:15px;">
+            <select id="filterCategory" style="padding:8px; border:1px solid #ccc; border-radius:5px; min-width:120px;">
+                <option value="">All Categories</option>
+            </select>
+            <input type="text" id="filterKeyword" placeholder="Keyword in title..." style="padding:8px; border:1px solid #ccc; border-radius:5px; min-width:150px;">
+            <select id="filterTime" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+                <option value="">Any time</option>
+                <option value="7">Last 1 Week</option>
+                <option value="30">Last 1 Month</option>
+                <option value="90">Last 3 Months</option>
+                <option value="180">Last 6 Months</option>
+                <option value="365">Last 1 Year</option>
+            </select>
+            <button id="applyFilterBtn" class="btn-primary">Apply Filter</button>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="filterPreviewContainer" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+            <h5 style="margin-bottom:10px;">📹 Filtered Videos (Preview):</h5>
+            <div id="filterPreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; max-height:300px; overflow-y:auto;"></div>
             
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; align-items:center;">
+                <button id="deleteFilteredBtn" class="btn-danger" style="display:none;">🗑 Delete All Filtered</button>
+                
+                <span id="assignFilteredWrapper" style="display:none; display:flex; gap:10px; align-items:center;">
+                    <select id="assignFilteredCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+                        <option value="">Select Category...</option>
+                    </select>
+                    <button id="assignFilteredBtn" class="btn-secondary">📂 Assign Category</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
             <div class="admin-table-wrapper">
                 <table class="admin-table">
                     <thead>
