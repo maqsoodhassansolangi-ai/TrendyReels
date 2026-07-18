@@ -310,9 +310,7 @@ async function addVideo(formData) {
         const embedCode = formData.get('embed');
         const category = formData.get('category');
         const isCopyrightFree = formData.get('copyrightFree') === 'on';
-        let title = 'Video'; // آپ کی موجودہ لائن
-// 👇 یہ لائن اس کے نیچے شامل کریں
-let suggestedCategory = autoSuggestCategory(title);
+        let title = 'Video'; // آپ کی موجودہ لائ
         const ytMatch = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
         if (ytMatch) {
             try {
@@ -323,6 +321,7 @@ let suggestedCategory = autoSuggestCategory(title);
         }
         // پرانا کوڈ: category: category,
 // نیا کوڈ (تبدیلی کریں):
+        let suggestedCategory = autoSuggestCategory(title);
 await supabase.post('videos', { 
     title, 
     embed_code: embedCode, 
