@@ -210,6 +210,22 @@
                 <p><strong>Total Videos:</strong> <span id="totalVideosCount">0</span></p>
                 <p><strong>Database:</strong> Supabase (Connected)</p>
             </div>
+            <!-- Backup & Restore Card -->
+<div class="settings-card">
+    <h3>💾 Backup & Restore</h3>
+    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+        <button id="downloadBackupBtn" class="btn-secondary">📥 Download Backup</button>
+        
+        <div style="display:flex; gap:10px; align-items:center;">
+            <span style="font-size:0.9rem; font-weight:bold;">Restore:</span>
+            <input type="file" id="restoreFileInput" accept=".json" style="padding:6px; border:1px solid #ccc; border-radius:5px; background:#fff;">
+            <button id="restoreBackupBtn" class="btn-danger">⚠️ Upload & Restore</button>
+        </div>
+    </div>
+    <p style="font-size:0.8rem; color:#888; margin-top:10px;">
+        <strong>Warning:</strong> Restoring a backup will <b>permanently delete ALL current videos</b> and replace them with the backup data.
+    </p>
+</div>
         </section>
     </main>
 
