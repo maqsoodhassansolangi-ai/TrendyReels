@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - Phase 1: Final (Fullscreen + PiP Added)
+// USER.JS - Phase 1: Fixed Controls for ALL Videos (YouTube/Dailymotion)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -36,7 +36,7 @@ function upgradeNativeVideo(videoElement) {
         videoElement.playbackRate = parseFloat(this.value);
     });
 
-    // PiP Button
+    // Controls Container
     const controlsContainer = document.createElement('div');
     controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
     controlsContainer.innerHTML = `
@@ -81,8 +81,11 @@ function openModernVideoModal(video) {
         .slice(0, 4);
 
     let playerHtml = '';
+    let isNativeVideo = false;
+
     if (video.embed_code.trim().startsWith('<video')) {
         playerHtml = video.embed_code;
+        isNativeVideo = true;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
         playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="autoplay; encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
@@ -105,11 +108,26 @@ function openModernVideoModal(video) {
         `;
     }
 
+    // ✅ اب کنٹرولز ہر پلیئر کے اوپر نظر آئیں گے
     player.innerHTML = `
         <div style="position:relative;">
             <button id="closeModalBtn" style="position:absolute; top:10px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:24px; border-radius:50%; width:40px; height:40px; cursor:pointer; z-index:20; font-family:sans-serif;">&times;</button>
             ${playerHtml}
-            <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
+            <!-- ✅ یہ کنٹرولز ہمیشہ نظر آئیں گے -->
+            <div id="customControls" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); padding:8px 15px; border-radius:30px; display:flex; gap:15px; align-items:center; z-index:30; backdrop-filter:blur(4px);">
+                <select id="speedControl2" style="background:black; color:white; border:1px solid #555; border-radius:4px; padding:2px 6px; font-size:12px;">
+                    <option value="0.5">0.5x</option>
+                    <option value="0.75">0.75x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+                <button id="fullscreenBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">⛶</button>
+                <button id="pipBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">🖼️</button>
+                <button id="loopBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">🔁</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px; padding:0 5px;">
                 <div style="display:flex; gap:6px;">
                     <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
                     <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
@@ -128,6 +146,53 @@ function openModernVideoModal(video) {
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
+    // ✅ Speed Control (Always Works)
+    document.getElementById('speedControl2').addEventListener('change', function() {
+        const video = player.querySelector('video');
+        const iframe = player.querySelector('iframe');
+        if (video) video.playbackRate = parseFloat(this.value);
+        else if (iframe) {
+            const src = iframe.src;
+            if (!src.includes('speed=')) {
+                iframe.src = src + '&speed=' + this.value;
+            }
+        }
+    });
+
+    // ✅ Fullscreen (Always Works)
+    document.getElementById('fullscreenBtn2').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            player.parentElement.requestFullscreen().catch(err => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // ✅ PiP (Always Works)
+    document.getElementById('pipBtn2').addEventListener('click', () => {
+        const video = player.querySelector('video');
+        if (video) {
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture();
+            } else {
+                video.requestPictureInPicture().catch(err => {});
+            }
+        } else {
+            alert('PiP works best on native videos.');
+        }
+    });
+
+    // ✅ Loop (Always Works)
+    document.getElementById('loopBtn2').addEventListener('click', () => {
+        const video = player.querySelector('video');
+        if (video) {
+            video.loop = !video.loop;
+            document.getElementById('loopBtn2').style.color = video.loop ? '#4CAF50' : 'white';
+        } else {
+            alert('Loop works on native videos.');
+        }
+    });
+
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -139,7 +204,6 @@ function openModernVideoModal(video) {
                 this.currentTime -= 10;
             }
         });
-        upgradeNativeVideo(videoEl);
     }
 
     document.getElementById('prevVideoBtn').addEventListener('click', () => {
