@@ -252,13 +252,25 @@ function closeVideoModal() {
 function renderAdminVideos() {
     const tbody = $('#adminVideoTableBody');
     if (!tbody) return;
+    
     if (state.videos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;">No videos added yet</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;">No videos added yet</td></tr>`;
         return;
     }
-    tbody.innerHTML = state.videos.map(video => `
+
+    tbody.innerHTML = state.videos.map(video => {
+        // اگر تھمبنیل نہیں ہے تو فوراً بنا لیں
+        let thumbSrc = video.thumbnail || getThumbnail(video.embed_code);
+        // اگر تھمبنیل نہیں بن رہا تو ایک ڈیفالٹ امیج دکھائیں
+        if (!thumbSrc) thumbSrc = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="30"><rect fill="%23ddd"/></svg>';
+
+        return `
         <tr>
             <td><input type="checkbox" class="video-checkbox" data-id="${video.id}"></td>
+            <td>
+                <!-- ✅ چھوٹا تھمبنیل -->
+                <img src="${thumbSrc}" style="width:50px; height:30px; object-fit:cover; border-radius:4px;" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'30\'><rect fill=\'%23ddd\'/></svg>'">
+            </td>
             <td>${video.title || 'Untitled'}</td>
             <td>${video.category || 'Uncategorized'}</td>
             <td>${video.embed_code ? '✅' : '❌'}</td>
@@ -266,9 +278,25 @@ function renderAdminVideos() {
             <td>${video.published ? '✅ Published' : '⏳ Draft'}</td>
             <td class="actions-cell"><button class="delete-btn" onclick="deleteVideo(${video.id})">🗑</button></td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
+
     const countEl = $('#totalVideosCount');
     if (countEl) countEl.textContent = state.videos.length;
+
+    // ✅ خود بخود تھمبنیلز کو ڈیٹا بیس میں سیو کرنا
+    state.videos.forEach(async (video) => {
+        if (!video.thumbnail) {
+            const thumb = getThumbnail(video.embed_code);
+            if (thumb) {
+                try {
+                    await supabase.patch('videos', { thumbnail: thumb }, video.id);
+                } catch (e) {
+                    console.warn('Failed to save thumbnail:', e);
+                }
+            }
+        }
+    });
 }
 
 async function deleteVideo(id) {
