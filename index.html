@@ -1,8 +1,7 @@
 // ============================================
-// USER.JS - Phase 1: Player Upgrade + Next/Prev + 10s Seek + Related
+// USER.JS - Phase 1: Player Upgrade (Double-Checked)
 // ============================================
 
-// --- 1. Next / Prev Video Logic ---
 function getAdjacentVideo(direction) {
     const current = state.currentVideo;
     if (!current) return null;
@@ -13,11 +12,10 @@ function getAdjacentVideo(direction) {
     return state.videos[newIndex];
 }
 
-// --- 2. Native Video Player Upgrade (Speed, PiP, Loop) ---
 function upgradeNativeVideo(videoElement) {
     if (!videoElement) return;
 
-    // Speed Control (0.5x to 2x)
+    // Speed Control
     const speedContainer = document.createElement('div');
     speedContainer.style.cssText = 'position:absolute; bottom:70px; right:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:6px; align-items:center;';
     speedContainer.innerHTML = `
@@ -34,11 +32,11 @@ function upgradeNativeVideo(videoElement) {
     videoElement.parentElement.style.position = 'relative';
     videoElement.parentElement.appendChild(speedContainer);
 
-    document.getElementById('speedControl')?.addEventListener('change', function() {
+    document.getElementById('speedControl').addEventListener('change', function() {
         videoElement.playbackRate = parseFloat(this.value);
     });
 
-    // Picture-in-Picture (PiP) & Loop
+    // PiP & Loop
     const controlsContainer = document.createElement('div');
     controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
     controlsContainer.innerHTML = `
@@ -47,7 +45,7 @@ function upgradeNativeVideo(videoElement) {
     `;
     videoElement.parentElement.appendChild(controlsContainer);
 
-    document.getElementById('pipBtn')?.addEventListener('click', () => {
+    document.getElementById('pipBtn').addEventListener('click', () => {
         if (document.pictureInPictureElement) {
             document.exitPictureInPicture();
         } else {
@@ -55,34 +53,29 @@ function upgradeNativeVideo(videoElement) {
         }
     });
 
-    document.getElementById('loopBtn')?.addEventListener('click', () => {
+    document.getElementById('loopBtn').addEventListener('click', () => {
         videoElement.loop = !videoElement.loop;
         document.getElementById('loopBtn').style.color = videoElement.loop ? '#4CAF50' : 'white';
     });
 }
 
-// --- 3. Open Video Modal (Upgraded) ---
 function openModernVideoModal(video) {
-    const modal = $('#videoModal');
-    const player = $('#videoPlayer');
-    const title = $('#modalVideoTitle');
+    const modal = document.getElementById('videoModal');
+    const player = document.getElementById('videoPlayer');
+    const title = document.getElementById('modalVideoTitle');
 
-    // Get Related Videos
     const related = state.videos
         .filter(v => v.id !== video.id && v.category === video.category)
         .slice(0, 4);
 
-    // Build Player
     let playerHtml = '';
     if (video.embed_code.trim().startsWith('<video')) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        // ✅ سیف iframe (User Gesture Policy کو مدنظر رکھتے ہوئے)
         playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="autoplay; encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
-    // Build Related Grid
     let relatedHtml = '';
     if (related.length > 0) {
         relatedHtml = `
@@ -100,14 +93,10 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // Final HTML with Close Button Fixed
     player.innerHTML = `
         <div style="position:relative;">
-            <!-- ✅ Close Button (Fix) -->
             <button id="closeModalBtn" style="position:absolute; top:10px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:24px; border-radius:50%; width:40px; height:40px; cursor:pointer; z-index:20; font-family:sans-serif;">&times;</button>
-            
             ${playerHtml}
-            
             <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
                 <div style="display:flex; gap:6px;">
                     <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
@@ -122,13 +111,11 @@ function openModernVideoModal(video) {
         </div>
     `;
 
-    // ✅ Close Button Functionality
     document.getElementById('closeModalBtn').onclick = function() {
-        $('#videoModal').classList.remove('active');
-        $('#videoPlayer').innerHTML = '';
+        document.getElementById('videoModal').classList.remove('active');
+        document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    // Add 10s Double-Click Seek
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -143,41 +130,46 @@ function openModernVideoModal(video) {
         upgradeNativeVideo(videoEl);
     }
 
-    // Setup Buttons
-    document.getElementById('prevVideoBtn')?.addEventListener('click', () => {
+    document.getElementById('prevVideoBtn').addEventListener('click', () => {
         const prev = getAdjacentVideo('prev');
         if (prev) openModernVideoModal(prev);
         else alert('No previous video.');
     });
 
-    document.getElementById('nextVideoBtn')?.addEventListener('click', () => {
+    document.getElementById('nextVideoBtn').addEventListener('click', () => {
         const next = getAdjacentVideo('next');
         if (next) openModernVideoModal(next);
         else alert('No next video.');
     });
 
-    document.getElementById('shareBtn')?.addEventListener('click', () => {
+    document.getElementById('shareBtn').addEventListener('click', () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
         const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
-        if (shareMenu === '1') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-        else if (shareMenu === '2') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
-        else if (shareMenu === '3') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-        else if (shareMenu === '4') {
+        if (shareMenu === '1') {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        } else if (shareMenu === '2') {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+        } else if (shareMenu === '3') {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        } else if (shareMenu === '4') {
             navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
         }
     });
 
     if (video.is_copyright_free) {
-        document.getElementById('downloadBtn')?.addEventListener('click', () => {
+        document.getElementById('downloadBtn').addEventListener('click', () => {
             if (video.embed_code.trim().startsWith('<video')) {
                 const srcMatch = video.embed_code.match(/src="([^"]+)"/);
                 if (srcMatch) window.open(srcMatch[1], '_blank');
             } else {
                 const embedUrl = extractEmbedUrl(video.embed_code);
                 const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-                if (ytMatch) window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
-                else window.open(embedUrl, '_blank');
+                if (ytMatch) {
+                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                } else {
+                    window.open(embedUrl, '_blank');
+                }
             }
         });
     }
@@ -187,7 +179,6 @@ function openModernVideoModal(video) {
     modal.classList.add('active');
 }
 
-// --- 4. Intercept original modal click ---
 const originalOpen = openVideoModal;
 openVideoModal = function(video) {
     if (video && video.id) {
