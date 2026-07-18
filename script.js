@@ -913,7 +913,6 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
-window.openVideoModal = openVideoModal;
 
 // ============================================
 // Admin Gallery + Global Search (Single Tab)
