@@ -863,6 +863,123 @@ if (document.readyState === 'loading') {
 window.deleteVideo = deleteVideo;
 
 // ============================================
+// Duplicate Review Panel
+// ============================================
+
+function findDuplicates() {
+    const videos = state.videos;
+    const grouped = {};
+
+    videos.forEach(video => {
+        const id = extractVideoId(video.embed_code);
+        if (!id) return;
+        if (!grouped[id]) grouped[id] = [];
+        grouped[id].push(video);
+    });
+
+    // صرف وہی گروپ واپس کریں جن میں 1 سے زائد ویڈیوز ہوں
+    const duplicates = {};
+    Object.keys(grouped).forEach(key => {
+        if (grouped[key].length > 1) {
+            duplicates[key] = grouped[key];
+        }
+    });
+
+    return duplicates;
+}
+
+function extractVideoId(embedCode) {
+    if (!embedCode) return null;
+    // YouTube ID extract
+    const ytMatch = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return ytMatch[1];
+    // Dailymotion ID extract
+    const dmMatch = embedCode.match(/\/video\/([a-zA-Z0-9]+)/);
+    if (dmMatch) return dmMatch[1];
+    // اگر کوئی اور ہے تو embedCode کا MD5 یا پوری لائن استعمال کریں
+    return embedCode.replace(/\s/g, '').substring(0, 50); // Fallback
+}
+
+function renderDuplicates() {
+    const container = document.getElementById('duplicateList');
+    if (!container) return;
+
+    const duplicates = findDuplicates();
+    const keys = Object.keys(duplicates);
+
+    if (keys.length === 0) {
+        container.innerHTML = `<p style="color:#888; text-align:center; padding:20px;">🎉 No duplicate videos found! Everything is clean.</p>`;
+        return;
+    }
+
+    let html = '';
+    keys.forEach((id, index) => {
+        const group = duplicates[id];
+        const original = group[0]; // پہلی ویڈیو کو اصلی سمجھیں
+        const duplicatesList = group.slice(1); // باقی ڈپلیکیٹس
+
+        html += `
+        <div style="border:1px solid #ddd; border-radius:8px; padding:15px; background:#f9f9f9; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0;">🔁 Duplicate Group #${index + 1}</h4>
+                <button class="btn-danger delete-all-duplicates-btn" data-id="${id}" style="padding:6px 14px;">🗑 Delete All Duplicates (Keep 1)</button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px;">
+                <!-- Original -->
+                <div style="padding:10px; border:2px solid #4CAF50; border-radius:6px; background:#e8f5e9;">
+                    <strong>✅ Original</strong><br>
+                    <img src="${getThumbnail(original.embed_code)}" style="width:100%; border-radius:4px;"><br>
+                    <small>${original.title}</small>
+                </div>
+                <!-- Duplicates -->
+                ${duplicatesList.map(v => `
+                    <div style="padding:10px; border:1px solid #f44336; border-radius:6px; background:#ffebee;">
+                        <strong>❌ Duplicate</strong><br>
+                        <img src="${getThumbnail(v.embed_code)}" style="width:100%; border-radius:4px;"><br>
+                        <small>${v.title}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // ڈیلیٹ بٹن کا ایونٹ
+    container.querySelectorAll('.delete-all-duplicates-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const groupId = this.dataset.id; // یہ ویڈیو ID ہے (گروپ کی کلید)
+            const group = duplicates[groupId];
+            if (!group || group.length < 2) return;
+            
+            if (confirm(`Are you sure you want to delete ${group.length - 1} duplicate(s)? The original will be kept.`)) {
+                // اصلی کو چھوڑ کر باقی سب ڈیلیٹ کریں
+                const toDelete = group.slice(1);
+                for (const vid of toDelete) {
+                    await supabase.delete('videos', vid.id);
+                }
+                await loadVideos(); // دوبارہ لوڈ کریں
+                renderDuplicates(); // لسٹ ریفریش کریں
+                alert(`✅ ${toDelete.length} duplicate(s) deleted successfully!`);
+            }
+        });
+    });
+}
+
+// ڈپلیکیٹ ٹیب پر کلک کرنے پر رینڈر کریں
+document.addEventListener('DOMContentLoaded', () => {
+    const tabBtns = document.querySelectorAll('.admin-tab');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (this.dataset.tab === 'duplicates') {
+                renderDuplicates();
+            }
+        });
+    });
+});
+
+// ============================================
 // Link Cleaner & Exporter Functions (New Tab)
 // ============================================
 
