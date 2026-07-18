@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL PHASE 1 (Auto-Rotate + YouTube-like Controls)
+// USER.JS - FINAL PHASE 1 (Rotate + Lock Buttons)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -48,7 +48,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // ✅ YouTube-style Controls with Auto-hide
+    // ✅ YouTube-style Controls (Transparent + Rotate + Lock)
     const controlsHtml = `
         <div class="yt-controls-overlay" id="ytControlsOverlay">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -62,6 +62,8 @@ function openModernVideoModal(video) {
                 </select>
             </div>
             <div style="display:flex; gap:12px; align-items:center;">
+                <button class="yt-btn" id="rotateBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔄</button>
+                <button class="yt-btn" id="lockBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔒</button>
                 <button class="yt-btn" id="fullscreenBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">⛶</button>
                 <button class="yt-btn" id="pipBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🖼️</button>
                 <button class="yt-btn" id="loopBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔁</button>
@@ -98,14 +100,14 @@ function openModernVideoModal(video) {
         if (video) video.playbackRate = parseFloat(this.value);
     });
 
-    // ✅ Auto-Rotate on Fullscreen (موبائل کو گھمائے گا)
+    // ✅ Fullscreen (with Auto-Rotate attempt)
     document.getElementById('fullscreenBtn').addEventListener('click', function() {
         const container = document.getElementById('videoPlayerContainer');
         if (!document.fullscreenElement) {
             container.requestFullscreen().catch(err => {});
-            // موبائل کو خود بخود گھمانے کے لیے
+            // براؤزر روٹیٹ کی کوشش کریں
             if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(err => {});
+                screen.orientation.lock('landscape').catch(() => {});
             }
         } else {
             document.exitFullscreen();
@@ -115,13 +117,37 @@ function openModernVideoModal(video) {
         }
     });
 
+    // ✅ Rotate Button (Manual rotate with lock)
+    document.getElementById('rotateBtn').addEventListener('click', function() {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').then(() => {
+                document.getElementById('rotateBtn').style.color = '#4CAF50';
+                document.getElementById('rotateBtn').textContent = '🔓';
+            }).catch(() => {});
+        }
+    });
+
+    // ✅ Lock Button (Toggle lock)
+    document.getElementById('lockBtn').addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+            const container = document.getElementById('videoPlayerContainer');
+            container.requestFullscreen().catch(() => {});
+        }
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').then(() => {
+                document.getElementById('lockBtn').style.color = '#4CAF50';
+                document.getElementById('lockBtn').textContent = '🔓';
+            }).catch(() => {});
+        }
+    });
+
     document.getElementById('pipBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
             if (document.pictureInPictureElement) {
                 document.exitPictureInPicture();
             } else {
-                video.requestPictureInPicture().catch(err => {});
+                video.requestPictureInPicture().catch(() => {});
             }
         }
     });
