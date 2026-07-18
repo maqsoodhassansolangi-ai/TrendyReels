@@ -915,6 +915,101 @@ if (document.readyState === 'loading') {
 window.deleteVideo = deleteVideo;
 
 // ============================================
+// Backup & Restore (New Module - inside Settings)
+// ============================================
+
+// 1. Download Backup
+document.addEventListener('DOMContentLoaded', () => {
+    const downloadBtn = document.getElementById('downloadBackupBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            if (state.videos.length === 0) {
+                alert('No videos to backup. Add some videos first!');
+                return;
+            }
+
+            const data = {
+                version: '3.7.0',
+                timestamp: new Date().toISOString(),
+                totalVideos: state.videos.length,
+                videos: state.videos
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trendyreels_backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert('✅ Backup downloaded successfully!');
+        });
+    }
+
+    // 2. Restore Backup
+    const restoreBtn = document.getElementById('restoreBackupBtn');
+    const fileInput = document.getElementById('restoreFileInput');
+    if (restoreBtn && fileInput) {
+        restoreBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a valid .json backup file first.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    // Basic validation
+                    if (!backupData.videos || !Array.isArray(backupData.videos)) {
+                        throw new Error('Invalid backup file format.');
+                    }
+
+                    if (!confirm(`⚠️ This will DELETE all ${state.videos.length} current videos and restore ${backupData.videos.length} videos from the backup. Are you sure?`)) {
+                        return;
+                    }
+
+                    // Step 1: Delete ALL current videos
+                    let deletedCount = 0;
+                    for (const v of state.videos) {
+                        try {
+                            await supabase.delete('videos', v.id);
+                            deletedCount++;
+                        } catch (e) {
+                            console.warn('Failed to delete video:', e);
+                        }
+                    }
+
+                    // Step 2: Insert backup videos
+                    let insertedCount = 0;
+                    for (const v of backupData.videos) {
+                        try {
+                            // Remove the ID so Supabase generates a new one
+                            const { id, created_at, ...cleanVideo } = v;
+                            await supabase.post('videos', cleanVideo);
+                            insertedCount++;
+                        } catch (e) {
+                            console.warn('Failed to insert video:', e);
+                        }
+                    }
+
+                    alert(`✅ Restore complete! Deleted ${deletedCount} old videos, inserted ${insertedCount} new videos.`);
+                    fileInput.value = ''; // Clear input
+                    await loadVideos(); // Refresh the list
+                } catch (error) {
+                    alert(`❌ Restore failed: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+});
+
+// ============================================
 // Smart Filter Bot (New Module)
 // ============================================
 
