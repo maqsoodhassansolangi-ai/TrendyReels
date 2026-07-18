@@ -25,6 +25,7 @@
         <button class="admin-tab" data-tab="ads">📢 Ads</button>
         <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
+        <button class="admin-tab" data-tab="gallery">📸 Gallery</button>
         <button class="admin-tab" data-tab="linkcleaner">🧹 Link Cleaner</button>
         <button class="admin-tab" data-tab="duplicates">🔄 Duplicates</button>
     </nav>
@@ -227,6 +228,23 @@
     </p>
 </div>
         </section>
+        <!-- Gallery Tab with Global Search -->
+<section id="galleryTab" class="admin-tab-content">
+    <h2>📸 Gallery & Global Search</h2>
+    
+    <!-- Search & Filter Bar -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:8px; border:1px solid #eee;">
+        <input type="text" id="gallerySearchInput" placeholder="Search by Title or URL..." style="flex:1; min-width:150px; padding:10px; border:1px solid #ccc; border-radius:5px;">
+        <select id="galleryCategoryFilter" style="padding:10px; border:1px solid #ccc; border-radius:5px; min-width:120px;">
+            <option value="all">All Categories</option>
+        </select>
+        <button id="gallerySearchBtn" class="btn-primary">🔍 Search</button>
+        <button id="galleryResetBtn" class="btn-secondary">🔄 Reset</button>
+    </div>
+
+    <!-- Video Grid Preview -->
+    <div id="adminGalleryGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px;"></div>
+</section>
     </main>
 
     <!-- Add Video Modal -->
