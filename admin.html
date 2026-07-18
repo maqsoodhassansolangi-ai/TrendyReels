@@ -37,6 +37,14 @@
                 <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
                 <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
                 
+                <!-- Bulk Category Assign -->
+<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center;">
+    <select id="bulkCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+        <option value="">Select Category...</option>
+        <!-- JS سے کیٹیگریز یہاں لوڈ ہوں گی -->
+    </select>
+    <button id="bulkAssignCategoryBtn" class="btn-secondary">📂 Assign Category</button>
+</div>
                 <!-- 3 Bot Buttons -->
                 <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
                     <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white; flex:1; min-width:100px;">▶ YouTube</button>
