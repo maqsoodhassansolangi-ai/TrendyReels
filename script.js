@@ -782,6 +782,8 @@ async function init() {
     applyTheme();
     await loadCategories();
     await loadVideos();
+    // loadVideos کے اندر شامل کریں:
+loadBulkCategoryDropdown();
     await loadAdSlots();
     initSecretAdmin();
     const searchInput = $('#searchInput');
@@ -861,7 +863,64 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+// ============================================
+// Bulk Category Assign (New Module)
+// ============================================
 
+// Bulk Category dropdown کو لوڈ کرنا (جب ویڈیوز لوڈ ہوں تو کیٹیگریز بھی لوڈ کریں)
+function loadBulkCategoryDropdown() {
+    const select = document.getElementById('bulkCategorySelect');
+    if (!select) return;
+    // موجودہ آپشنز صاف کریں (صرف پہلا رکھیں)
+    select.innerHTML = '<option value="">Select Category...</option>';
+    state.categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        select.appendChild(opt);
+    });
+}
+
+// Bulk Assign Button کا ایونٹ
+document.addEventListener('DOMContentLoaded', () => {
+    const assignBtn = document.getElementById('bulkAssignCategoryBtn');
+    const select = document.getElementById('bulkCategorySelect');
+    
+    if (assignBtn && select) {
+        assignBtn.addEventListener('click', async () => {
+            // چیک شدہ ویڈیوز نکالیں
+            const selected = document.querySelectorAll('.video-checkbox:checked');
+            if (selected.length === 0) {
+                alert('Please select at least one video.');
+                return;
+            }
+            
+            const newCategory = select.value;
+            if (!newCategory) {
+                alert('Please select a category from the dropdown.');
+                return;
+            }
+            
+            if (!confirm(`Assign category "${newCategory}" to ${selected.length} video(s)?`)) return;
+            
+            const ids = Array.from(selected).map(cb => parseInt(cb.dataset.id));
+            let successCount = 0;
+            
+            for (const id of ids) {
+                try {
+                    await supabase.patch('videos', { category: newCategory }, id);
+                    successCount++;
+                } catch (e) {
+                    console.error('Failed to update video:', e);
+                }
+            }
+            
+            alert(`✅ ${successCount} video(s) updated to "${newCategory}"!`);
+            await loadVideos(); // لسٹ ریفریش کریں
+            loadBulkCategoryDropdown(); // ڈراپ ڈاؤن ریفریش کریں
+        });
+    }
+});
 // ============================================
 // Duplicate Review Panel
 // ============================================
