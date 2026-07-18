@@ -694,3 +694,44 @@ body.dark-mode .ad-slot-card textarea {
     border: 0;
     display: block;
 }
+
+/* YouTube-style overlay controls with auto-hide */
+.yt-controls-overlay {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 12px;
+    border-radius: 30px;
+    z-index: 30;
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+    transition: opacity 0.4s ease;
+    opacity: 0.8;
+}
+
+.video-player-container:hover .yt-controls-overlay,
+.video-player-container:active .yt-controls-overlay {
+    opacity: 1;
+}
+
+#videoPlayerContainer {
+    position: relative;
+    width: 100%;
+    background: black;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+#videoPlayerContainer iframe,
+#videoPlayerContainer video {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
