@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - Phase 1: Dailymotion Fix + Cached
+// USER.JS - FINAL PHASE 1 (Mobile Play Fix)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -17,6 +17,7 @@ function openModernVideoModal(video) {
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
 
+    // Get Related Videos
     const related = state.videos
         .filter(v => v.id !== video.id && v.category === video.category)
         .slice(0, 4);
@@ -26,7 +27,7 @@ function openModernVideoModal(video) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        // Dailymotion کے لیے autoplay کو مکمل ہٹا دیا (کیونکہ یہ موبائل پر مسئلہ بن رہا تھا)
+        // Android Chrome fix: autoplay کو ہٹا دیا، اور allow کو صحیح کیا
         playerHtml = `<iframe src="${embedUrl}" allow="encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
@@ -47,7 +48,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // Controls
+    // Controls (YouTube style)
     const controlsHtml = `
         <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -68,6 +69,7 @@ function openModernVideoModal(video) {
         </div>
     `;
 
+    // پلیئر کو لوڈ کریں
     player.innerHTML = `
         <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
             ${playerHtml}
@@ -86,11 +88,64 @@ function openModernVideoModal(video) {
         ${relatedHtml}
     `;
 
+    // Close Button (اب کراس بٹن کام کرے گا)
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
+    // Speed Control
+    document.getElementById('speedControl').addEventListener('change', function() {
+        const video = player.querySelector('video');
+        if (video) video.playbackRate = parseFloat(this.value);
+    });
+
+    // Fullscreen Button
+    document.getElementById('fullscreenBtn').addEventListener('click', function() {
+        const container = player.querySelector('.video-player-container');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // PiP Button
+    document.getElementById('pipBtn').addEventListener('click', function() {
+        const video = player.querySelector('video');
+        if (video) {
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture();
+            } else {
+                video.requestPictureInPicture().catch(err => {});
+            }
+        }
+    });
+
+    // Loop Button
+    document.getElementById('loopBtn').addEventListener('click', function() {
+        const video = player.querySelector('video');
+        if (video) {
+            video.loop = !video.loop;
+            document.getElementById('loopBtn').style.color = video.loop ? '#4CAF50' : 'white';
+        }
+    });
+
+    // Double-click Seek (10s)
+    const videoEl = player.querySelector('video');
+    if (videoEl) {
+        videoEl.addEventListener('dblclick', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x > rect.width / 2) {
+                this.currentTime += 10;
+            } else {
+                this.currentTime -= 10;
+            }
+        });
+    }
+
+    // Prev / Next
     document.getElementById('prevVideoBtn').addEventListener('click', () => {
         const prev = getAdjacentVideo('prev');
         if (prev) openModernVideoModal(prev);
@@ -103,18 +158,23 @@ function openModernVideoModal(video) {
         else alert('No next video.');
     });
 
+    // Share
     document.getElementById('shareBtn').addEventListener('click', () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
         const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
-        if (shareMenu === '1') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-        else if (shareMenu === '2') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
-        else if (shareMenu === '3') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-        else if (shareMenu === '4') {
+        if (shareMenu === '1') {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        } else if (shareMenu === '2') {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+        } else if (shareMenu === '3') {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        } else if (shareMenu === '4') {
             navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
         }
     });
 
+    // Download
     if (video.is_copyright_free) {
         document.getElementById('downloadBtn').addEventListener('click', () => {
             if (video.embed_code.trim().startsWith('<video')) {
@@ -123,8 +183,11 @@ function openModernVideoModal(video) {
             } else {
                 const embedUrl = extractEmbedUrl(video.embed_code);
                 const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-                if (ytMatch) window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
-                else window.open(embedUrl, '_blank');
+                if (ytMatch) {
+                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                } else {
+                    window.open(embedUrl, '_blank');
+                }
             }
         });
     }
