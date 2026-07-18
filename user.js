@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - Phase 1: Fixed Controls for ALL Videos (YouTube/Dailymotion)
+// USER.JS - Phase 1: Final (YouTube-style Controls + Fullscreen Fix)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -12,65 +12,6 @@ function getAdjacentVideo(direction) {
     return state.videos[newIndex];
 }
 
-function upgradeNativeVideo(videoElement) {
-    if (!videoElement) return;
-
-    // Speed Control
-    const speedContainer = document.createElement('div');
-    speedContainer.style.cssText = 'position:absolute; bottom:70px; right:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:6px; align-items:center;';
-    speedContainer.innerHTML = `
-        <label style="color:white; font-size:12px;">Speed</label>
-        <select id="speedControl" style="background:black; color:white; border:1px solid #555; border-radius:4px; padding:2px 4px; font-size:12px;">
-            <option value="0.5">0.5x</option>
-            <option value="0.75">0.75x</option>
-            <option value="1" selected>1x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2x</option>
-        </select>
-    `;
-    videoElement.parentElement.style.position = 'relative';
-    videoElement.parentElement.appendChild(speedContainer);
-
-    document.getElementById('speedControl').addEventListener('change', function() {
-        videoElement.playbackRate = parseFloat(this.value);
-    });
-
-    // Controls Container
-    const controlsContainer = document.createElement('div');
-    controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
-    controlsContainer.innerHTML = `
-        <button id="fullscreenBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">⛶ Fullscreen</button>
-        <button id="pipBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🖼️ PiP</button>
-        <button id="loopBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🔁 Loop</button>
-    `;
-    videoElement.parentElement.appendChild(controlsContainer);
-
-    // Fullscreen
-    document.getElementById('fullscreenBtn').addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            videoElement.parentElement.requestFullscreen().catch(err => {});
-        } else {
-            document.exitFullscreen();
-        }
-    });
-
-    // PiP
-    document.getElementById('pipBtn').addEventListener('click', () => {
-        if (document.pictureInPictureElement) {
-            document.exitPictureInPicture();
-        } else {
-            videoElement.requestPictureInPicture().catch(err => {});
-        }
-    });
-
-    // Loop
-    document.getElementById('loopBtn').addEventListener('click', () => {
-        videoElement.loop = !videoElement.loop;
-        document.getElementById('loopBtn').style.color = videoElement.loop ? '#4CAF50' : 'white';
-    });
-}
-
 function openModernVideoModal(video) {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
@@ -81,14 +22,13 @@ function openModernVideoModal(video) {
         .slice(0, 4);
 
     let playerHtml = '';
-    let isNativeVideo = false;
-
+    let isNative = false;
     if (video.embed_code.trim().startsWith('<video')) {
         playerHtml = video.embed_code;
-        isNativeVideo = true;
+        isNative = true;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="autoplay; encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+        playerHtml = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
     let relatedHtml = '';
@@ -108,14 +48,12 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // ✅ اب کنٹرولز ہر پلیئر کے اوپر نظر آئیں گے
-    player.innerHTML = `
-        <div style="position:relative;">
-            <button id="closeModalBtn" style="position:absolute; top:10px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:24px; border-radius:50%; width:40px; height:40px; cursor:pointer; z-index:20; font-family:sans-serif;">&times;</button>
-            ${playerHtml}
-            <!-- ✅ یہ کنٹرولز ہمیشہ نظر آئیں گے -->
-            <div id="customControls" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); padding:8px 15px; border-radius:30px; display:flex; gap:15px; align-items:center; z-index:30; backdrop-filter:blur(4px);">
-                <select id="speedControl2" style="background:black; color:white; border:1px solid #555; border-radius:4px; padding:2px 6px; font-size:12px;">
+    // ✅ YouTube-style Controls (Overlay inside the player)
+    // ان کنٹرولز کا HTML اور CSS یکجا ہے، یہ صرف اسکرین پر ہی دکھیں گے اور پلیئر کے اندر ہوں گے
+    const controlsHtml = `
+        <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
+            <div style="display:flex; gap:12px; align-items:center;">
+                <select id="speedControl" style="background:transparent; color:white; border:1px solid #888; border-radius:4px; padding:2px 6px; font-size:12px; outline:none;">
                     <option value="0.5">0.5x</option>
                     <option value="0.75">0.75x</option>
                     <option value="1" selected>1x</option>
@@ -123,53 +61,67 @@ function openModernVideoModal(video) {
                     <option value="1.5">1.5x</option>
                     <option value="2">2x</option>
                 </select>
-                <button id="fullscreenBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">⛶</button>
-                <button id="pipBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">🖼️</button>
-                <button id="loopBtn2" style="background:none; border:none; color:white; cursor:pointer; font-size:16px;">🔁</button>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px; padding:0 5px;">
-                <div style="display:flex; gap:6px;">
-                    <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
-                    <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
-                </div>
-                <div style="display:flex; gap:6px;">
-                    <button id="shareBtn" class="action-btn">📤 Share</button>
-                    ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
-                </div>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <button class="yt-btn" id="fullscreenBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">⛶</button>
+                <button class="yt-btn" id="pipBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🖼️</button>
+                <button class="yt-btn" id="loopBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔁</button>
             </div>
-            ${relatedHtml}
         </div>
     `;
 
+    // پلیئر بنائیں
+    const modalContent = `
+        <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
+            ${playerHtml}
+            ${controlsHtml}
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; gap:6px;">
+                <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
+                <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button id="shareBtn" class="action-btn">📤 Share</button>
+                ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
+            </div>
+        </div>
+        ${relatedHtml}
+    `;
+
+    player.innerHTML = modalContent;
+
+    // Close Button
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    // ✅ Speed Control (Always Works)
-    document.getElementById('speedControl2').addEventListener('change', function() {
+    // 🔹 Speed Control
+    document.getElementById('speedControl').addEventListener('change', function() {
         const video = player.querySelector('video');
-        const iframe = player.querySelector('iframe');
         if (video) video.playbackRate = parseFloat(this.value);
-        else if (iframe) {
-            const src = iframe.src;
-            if (!src.includes('speed=')) {
-                iframe.src = src + '&speed=' + this.value;
+        else {
+            const iframe = player.querySelector('iframe');
+            if (iframe) {
+                // Dailymotion/YouTube speed might need different approach, but native is prioritized
+                alert('Speed control works best on native videos.');
             }
         }
     });
 
-    // ✅ Fullscreen (Always Works)
-    document.getElementById('fullscreenBtn2').addEventListener('click', () => {
+    // 🔹 Fullscreen Fix (اب پوری اسکرین پھیلے گی)
+    document.getElementById('fullscreenBtn').addEventListener('click', function() {
+        const container = player.querySelector('.video-player-container');
         if (!document.fullscreenElement) {
-            player.parentElement.requestFullscreen().catch(err => {});
+            container.requestFullscreen().catch(err => {});
         } else {
             document.exitFullscreen();
         }
     });
 
-    // ✅ PiP (Always Works)
-    document.getElementById('pipBtn2').addEventListener('click', () => {
+    // 🔹 PiP
+    document.getElementById('pipBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
             if (document.pictureInPictureElement) {
@@ -178,21 +130,22 @@ function openModernVideoModal(video) {
                 video.requestPictureInPicture().catch(err => {});
             }
         } else {
-            alert('PiP works best on native videos.');
+            alert('PiP is only supported for native videos.');
         }
     });
 
-    // ✅ Loop (Always Works)
-    document.getElementById('loopBtn2').addEventListener('click', () => {
+    // 🔹 Loop
+    document.getElementById('loopBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
             video.loop = !video.loop;
-            document.getElementById('loopBtn2').style.color = video.loop ? '#4CAF50' : 'white';
+            document.getElementById('loopBtn').style.color = video.loop ? '#4CAF50' : 'white';
         } else {
-            alert('Loop works on native videos.');
+            alert('Loop is only supported for native videos.');
         }
     });
 
+    // Double-click Seek (10s)
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -206,6 +159,7 @@ function openModernVideoModal(video) {
         });
     }
 
+    // Prev / Next
     document.getElementById('prevVideoBtn').addEventListener('click', () => {
         const prev = getAdjacentVideo('prev');
         if (prev) openModernVideoModal(prev);
@@ -218,6 +172,7 @@ function openModernVideoModal(video) {
         else alert('No next video.');
     });
 
+    // Share
     document.getElementById('shareBtn').addEventListener('click', () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
@@ -233,6 +188,7 @@ function openModernVideoModal(video) {
         }
     });
 
+    // Download
     if (video.is_copyright_free) {
         document.getElementById('downloadBtn').addEventListener('click', () => {
             if (video.embed_code.trim().startsWith('<video')) {
