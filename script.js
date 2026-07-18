@@ -890,16 +890,18 @@ function findDuplicates() {
 
 function extractVideoId(embedCode) {
     if (!embedCode) return null;
-    // YouTube ID extract
-    const ytMatch = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-    if (ytMatch) return ytMatch[1];
-    // Dailymotion ID extract
-    const dmMatch = embedCode.match(/\/video\/([a-zA-Z0-9]+)/);
-    if (dmMatch) return dmMatch[1];
-    // اگر کوئی اور ہے تو embedCode کا MD5 یا پوری لائن استعمال کریں
-    return embedCode.replace(/\s/g, '').substring(0, 50); // Fallback
-}
 
+    // 1. YouTube ID
+    const ytMatch = embedCode.match(/(?:youtube\.com\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return ytMatch[1];
+
+    // 2. Dailymotion ID
+    const dmMatch = embedCode.match(/dailymotion\.com\/embed\/video\/([a-zA-Z0-9]+)/);
+    if (dmMatch) return dmMatch[1];
+
+    // 👇 اگر YouTube یا Dailymotion نہیں ہے، تو اسے ڈپلیکیٹ میں شامل نہ کریں
+    return null; 
+}
 function renderDuplicates() {
     const container = document.getElementById('duplicateList');
     if (!container) return;
