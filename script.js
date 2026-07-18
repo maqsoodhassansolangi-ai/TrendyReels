@@ -901,7 +901,8 @@ loadBulkCategoryDropdown();
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
-    document.getElementById('processCleanerBtn').addEventListener('click', handleCleanerFile);
+    const cleanerBtn = document.getElementById('processCleanerBtn');
+if (cleanerBtn) cleanerBtn.addEventListener('click', handleCleanerFile);
     console.log('TrendyReels V3.4.1 (COMPLETE FINAL VERSION) initialized!');
 }
 
