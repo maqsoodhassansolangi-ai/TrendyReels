@@ -367,7 +367,12 @@ function autoDetectCopyright(title, channel) {
 // --- Review Panel ---
 function showReviewPanel(videos, defaultCategory = 'Technology') {
     if (!videos || videos.length === 0) { alert('No videos to review.'); return; }
-    state.pendingVideos = videos.map(v => ({ ...v, selectedCategory: defaultCategory, approved: true, is_copyright_free: v.is_copyright_free }));
+state.pendingVideos = videos.map(v => ({ 
+    ...v, 
+    selectedCategory: autoSuggestCategory(v.title) || defaultCategory, 
+    approved: true, 
+    is_copyright_free: v.is_copyright_free 
+}));
     const modal = document.createElement('div');
     modal.id = 'reviewModal';
     modal.className = 'modal';
@@ -903,6 +908,35 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+
+// ============================================
+// Auto-Category Suggest (New Module)
+// ============================================
+
+// کیٹیگری تجویز کرنے کا فنکشن (کلید الفاظ کی مماثلت)
+function autoSuggestCategory(title) {
+    if (!title) return '';
+    const t = title.toLowerCase();
+    
+    const rules = [
+        { category: 'Sports', keywords: ['cricket', 'match', 'bat', 'ball', 'sports', 'football', 'bowling', 'batsman'] },
+        { category: 'Technology', keywords: ['python', 'javascript', 'code', 'ai', 'tech', 'programming', 'tutorial', 'computer', 'software', 'hardware'] },
+        { category: 'Islamic', keywords: ['dua', 'quran', 'namaz', 'islamic', 'allah', 'ramadan', 'hajj', 'umrah', 'masjid'] },
+        { category: 'Entertainment', keywords: ['movie', 'film', 'song', 'music', 'funny', 'comedy', 'entertainment', 'drama'] },
+        { category: 'News', keywords: ['news', 'breaking', 'update', 'alert', 'politics', 'world', 'pakistan'] },
+        { category: 'Education', keywords: ['school', 'college', 'university', 'learn', 'course', 'lecture', 'study'] },
+    ];
+    
+    for (const rule of rules) {
+        for (const keyword of rule.keywords) {
+            if (t.includes(keyword)) {
+                return rule.category;
+            }
+        }
+    }
+    
+    return state.categories.length > 0 ? state.categories[0].name : 'General';
+}
 
 // ============================================
 // Bulk Delete by Category with Preview (New Module)
