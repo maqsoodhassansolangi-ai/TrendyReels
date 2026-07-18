@@ -361,6 +361,10 @@ body.dark-mode #secretAdminBtn {
     position: sticky;
     top: 64px;
     z-index: 999;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
 }
 body.dark-mode .admin-nav {
     background: var(--bg-dark);
@@ -376,6 +380,7 @@ body.dark-mode .admin-nav {
     border-radius: 20px;
     transition: all 0.2s;
     color: var(--text-light);
+    flex-shrink: 0;
 }
 body.dark-mode .admin-tab { color: var(--text-dark); }
 .admin-tab:hover { background: #E5E5E5; }
