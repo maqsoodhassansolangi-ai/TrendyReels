@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL FIX (Close Button Fixed)
+// USER.JS - FINAL FIX (Direct Player Injection)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -13,7 +13,11 @@ function getAdjacentVideo(direction) {
 }
 
 function openModernVideoModal(video) {
+    // پہلے موڈل کھولیں
     const modal = document.getElementById('videoModal');
+    modal.classList.add('active');
+    
+    // پھر پلیئر بنائیں
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
 
@@ -26,7 +30,8 @@ function openModernVideoModal(video) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        playerHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+        // ✅ sandbox کے ساتھ iframe (سیکیورٹی کے لیے)
+        playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
     let relatedHtml = '';
@@ -46,7 +51,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // Controls
+    // کنٹرولز
     const controlsHtml = `
         <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -67,7 +72,7 @@ function openModernVideoModal(video) {
         </div>
     `;
 
-    // ✅ پلیئر بنانا (اصلاح شدہ ورژن)
+    // موڈل کے اندر پلیئر ڈالیں
     player.innerHTML = `
         <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
             <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
@@ -87,12 +92,13 @@ function openModernVideoModal(video) {
         ${relatedHtml}
     `;
 
-    // ✅ Close Button (اب یہ کام کرے گا)
+    // کلوز بٹن
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
+    // کنٹرولز
     document.getElementById('speedControl').addEventListener('change', function() {
         const video = player.querySelector('video');
         if (video) video.playbackRate = parseFloat(this.value);
@@ -126,6 +132,7 @@ function openModernVideoModal(video) {
         }
     });
 
+    // 10s ڈبل کلک
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -185,14 +192,4 @@ function openModernVideoModal(video) {
 
     title.textContent = video.title || 'Untitled Video';
     state.currentVideo = video;
-    modal.classList.add('active');
-}
-
-const originalOpen = openVideoModal;
-openVideoModal = function(video) {
-    if (video && video.id) {
-        openModernVideoModal(video);
-    } else {
-        originalOpen(video);
-    }
 }
