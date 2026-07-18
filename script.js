@@ -687,7 +687,8 @@ async function processVideoData(videoData, dryRun = false) {
         embedCode = autoConvertUrlToEmbed(url);
     }
     if (!title) title = 'Untitled Video';
-    const assignedCategory = await ensureCategory(category ? category.trim() : 'General');
+const suggestedCategory = autoSuggestCategory(title);
+const assignedCategory = await ensureCategory(suggestedCategory || category || 'General');
     let thumbnail = '';
     if (embedCode.includes('youtube.com/embed/')) {
         const id = embedCode.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
