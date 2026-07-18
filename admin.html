@@ -25,6 +25,7 @@
         <button class="admin-tab" data-tab="ads">📢 Ads</button>
         <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
         <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
+        <button class="admin-tab" data-tab="linkcleaner">🧹 Link Cleaner</button>
     </nav>
 
     <main class="admin-content">
@@ -81,6 +82,31 @@
                 <!-- Rendered by JS -->
             </div>
         </section>
+        <!-- نیا ٹیب: Link Cleaner & Exporter -->
+<section id="linkcleanerTab" class="admin-tab-content">
+    <h2>🧹 Link Cleaner & Exporter (File to File)</h2>
+    <div class="admin-actions" style="flex-direction:column; gap:15px; align-items:flex-start;">
+        <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">
+            Upload a text or CSV file. The system will extract URLs, Titles, and Categories, and provide a clean file for download.
+        </p>
+        
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <input type="file" id="cleanerFileInput" accept=".txt,.csv" style="padding:8px; border:1px solid #ccc; border-radius:5px; background:#fff; min-width:200px;">
+            <button id="processCleanerBtn" class="btn-primary">⚙️ Process & Clean</button>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="cleanerPreviewContainer" style="display:none; margin-top:15px; width:100%;">
+            <h4 style="margin-bottom:10px;">Preview (Cleaned Data)</h4>
+            <div id="cleanerPreviewTable" style="max-height:300px; overflow-y:auto; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;"></div>
+            
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button id="downloadCleanedCsvBtn" class="btn-primary" style="display:none;">⬇ Download CSV</button>
+                <button id="downloadCleanedJsonBtn" class="btn-secondary" style="display:none;">⬇ Download JSON</button>
+            </div>
+        </div>
+    </div>
+</section>
 
         <!-- Settings Tab -->
         <section id="settingsTab" class="admin-tab-content">
