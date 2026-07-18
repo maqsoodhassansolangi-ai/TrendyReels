@@ -830,6 +830,7 @@ async function init() {
     applyTheme();
     await loadCategories();
     await loadVideos();
+    loadFilterDropdowns();
     // loadVideos کے اندر شامل کریں:
 loadBulkCategoryDropdown();
     loadBulkDeleteDropdown();
@@ -912,6 +913,137 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+
+// ============================================
+// Smart Filter Bot (New Module)
+// ============================================
+
+let filteredVideos = []; // فلٹر شدہ ویڈیوز کی عارضی لسٹ
+
+function loadFilterDropdowns() {
+    const catSelect = document.getElementById('filterCategory');
+    const assignSelect = document.getElementById('assignFilteredCategorySelect');
+    if (!catSelect) return;
+    
+    [catSelect, assignSelect].forEach(sel => {
+        if (!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">All Categories</option>';
+        state.categories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.name;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+        sel.value = currentVal;
+    });
+}
+
+function applySmartFilter() {
+    const cat = document.getElementById('filterCategory').value;
+    const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+    const timeOpt = document.getElementById('filterTime').value;
+
+    filteredVideos = state.videos.filter(v => {
+        // کیٹیگری فلٹر
+        if (cat && v.category !== cat) return false;
+        // عنوان میں کلید لفظ
+        if (keyword && !(v.title || '').toLowerCase().includes(keyword)) return false;
+        // وقت کا فلٹر (دنوں میں)
+        if (timeOpt) {
+            const days = parseInt(timeOpt);
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            const created = new Date(v.created_at);
+            if (created > cutoff) return false;
+        }
+        return true;
+    });
+
+    renderFilteredPreview();
+}
+
+function renderFilteredPreview() {
+    const container = document.getElementById('filterPreviewContainer');
+    const grid = document.getElementById('filterPreviewGrid');
+    const delBtn = document.getElementById('deleteFilteredBtn');
+    const assignWrapper = document.getElementById('assignFilteredWrapper');
+
+    if (filteredVideos.length === 0) {
+        container.style.display = 'none';
+        delBtn.style.display = 'none';
+        assignWrapper.style.display = 'none';
+        alert('No videos match your filter criteria.');
+        return;
+    }
+
+    container.style.display = 'block';
+    delBtn.style.display = 'inline-block';
+    assignWrapper.style.display = 'flex';
+
+    grid.innerHTML = filteredVideos.map(v => `
+        <div style="border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
+            <img src="${v.thumbnail || getThumbnail(v.embed_code)}" style="width:100%; height:80px; object-fit:cover;">
+            <div style="padding:6px; font-size:0.75rem; text-align:center; font-weight:500;">${v.title || 'Untitled'}</div>
+        </div>
+    `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('openSmartFilterBtn');
+    const panel = document.getElementById('smartFilterPanel');
+    const applyBtn = document.getElementById('applyFilterBtn');
+    const delBtn = document.getElementById('deleteFilteredBtn');
+    const assignBtn = document.getElementById('assignFilteredBtn');
+    const assignSelect = document.getElementById('assignFilteredCategorySelect');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') loadFilterDropdowns();
+        });
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applySmartFilter);
+    }
+
+    if (delBtn) {
+        delBtn.addEventListener('click', async () => {
+            if (filteredVideos.length === 0) return alert('No videos to delete.');
+            if (!confirm(`⚠️ Are you sure you want to delete ALL ${filteredVideos.length} filtered videos?`)) return;
+            
+            let deletedCount = 0;
+            for (const v of filteredVideos) {
+                try { await supabase.delete('videos', v.id); deletedCount++; } 
+                catch (e) { console.error('Delete error:', e); }
+            }
+            alert(`✅ ${deletedCount} video(s) deleted successfully!`);
+            filteredVideos = [];
+            renderFilteredPreview();
+            await loadVideos();
+        });
+    }
+
+    if (assignBtn) {
+        assignBtn.addEventListener('click', async () => {
+            if (filteredVideos.length === 0) return alert('No videos to assign.');
+            const newCat = assignSelect.value;
+            if (!newCat) return alert('Please select a category.');
+            if (!confirm(`Assign "${newCat}" to ALL ${filteredVideos.length} filtered videos?`)) return;
+
+            let updatedCount = 0;
+            for (const v of filteredVideos) {
+                try { await supabase.patch('videos', { category: newCat }, v.id); updatedCount++; }
+                catch (e) { console.error('Update error:', e); }
+            }
+            alert(`✅ ${updatedCount} video(s) updated to "${newCat}"!`);
+            filteredVideos = [];
+            renderFilteredPreview();
+            await loadVideos();
+        });
+    }
+});
 
 // ============================================
 // Auto SEO Tags Generator (New Module)
