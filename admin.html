@@ -37,13 +37,35 @@
                 <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
                 <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
                 
-                <!-- Bulk Category Assign -->
+                <!-- Bulk Category Assign with Preview -->
 <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center;">
+    <span style="font-weight:500; font-size:0.9rem;">📂 Assign Category:</span>
     <select id="bulkCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
         <option value="">Select Category...</option>
-        <!-- JS سے کیٹیگریز یہاں لوڈ ہوں گی -->
     </select>
-    <button id="bulkAssignCategoryBtn" class="btn-secondary">📂 Assign Category</button>
+    <button id="previewAssignBtn" class="btn-secondary">👁 Preview Selected</button>
+    <button id="bulkAssignCategoryBtn" class="btn-primary" style="display:none;">✅ Confirm Assign</button>
+</div>
+
+<!-- Preview Area for Bulk Assign -->
+<div id="bulkAssignPreviewContainer" style="display:none; margin-top:15px; border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9;">
+    <h5 style="margin-bottom:10px;">📹 Selected Videos (to be assigned):</h5>
+    <div id="bulkAssignPreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;"></div>
+</div>
+                <!-- Bulk Delete by Category with Preview -->
+<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center; border-top:1px solid #ddd; padding-top:10px;">
+    <span style="font-weight:500; font-size:0.9rem;">🗑 Delete by Category:</span>
+    <select id="bulkDeleteCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+        <option value="">Select Category...</option>
+    </select>
+    <button id="previewDeleteCategoryBtn" class="btn-secondary">👁 Preview Videos</button>
+    <button id="bulkDeleteByCategoryBtn" class="btn-danger" style="display:none;">🔥 Confirm Delete</button>
+</div>
+
+<!-- Preview Area (یہ چھپا ہوا ہوگا، پریویو بٹن دبانے پر کھلے گا) -->
+<div id="bulkDeletePreviewContainer" style="display:none; margin-top:15px; border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9;">
+    <h5 style="margin-bottom:10px;">📹 Videos in this category:</h5>
+    <div id="bulkDeletePreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;"></div>
 </div>
                 <!-- 3 Bot Buttons -->
                 <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
