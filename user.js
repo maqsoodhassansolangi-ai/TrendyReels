@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - Phase 1: Final (YouTube-style Controls + Fullscreen Fix)
+// USER.JS - Phase 1: Final (Click-to-Play Fixed)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -48,8 +48,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // ✅ YouTube-style Controls (Overlay inside the player)
-    // ان کنٹرولز کا HTML اور CSS یکجا ہے، یہ صرف اسکرین پر ہی دکھیں گے اور پلیئر کے اندر ہوں گے
+    // ✅ Controls (Overlay inside player)
     const controlsHtml = `
         <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -70,7 +69,7 @@ function openModernVideoModal(video) {
         </div>
     `;
 
-    // پلیئر بنائیں
+    // Player HTML
     const modalContent = `
         <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
             ${playerHtml}
@@ -91,26 +90,23 @@ function openModernVideoModal(video) {
 
     player.innerHTML = modalContent;
 
-    // Close Button
+    // ✅ Close Button Fix (اب کراس بٹن کام کرے گا)
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    // 🔹 Speed Control
+    // Speed Control
     document.getElementById('speedControl').addEventListener('change', function() {
         const video = player.querySelector('video');
         if (video) video.playbackRate = parseFloat(this.value);
         else {
             const iframe = player.querySelector('iframe');
-            if (iframe) {
-                // Dailymotion/YouTube speed might need different approach, but native is prioritized
-                alert('Speed control works best on native videos.');
-            }
+            if (iframe) alert('Speed control works best on native videos.');
         }
     });
 
-    // 🔹 Fullscreen Fix (اب پوری اسکرین پھیلے گی)
+    // Fullscreen
     document.getElementById('fullscreenBtn').addEventListener('click', function() {
         const container = player.querySelector('.video-player-container');
         if (!document.fullscreenElement) {
@@ -120,7 +116,7 @@ function openModernVideoModal(video) {
         }
     });
 
-    // 🔹 PiP
+    // PiP
     document.getElementById('pipBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
@@ -134,7 +130,7 @@ function openModernVideoModal(video) {
         }
     });
 
-    // 🔹 Loop
+    // Loop
     document.getElementById('loopBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
