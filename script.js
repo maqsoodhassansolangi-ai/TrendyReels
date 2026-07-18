@@ -850,6 +850,7 @@ async function init() {
         const btn = $(`#${id}`);
         if (btn) btn.addEventListener('click', fn);
     });
+    document.getElementById('processCleanerBtn').addEventListener('click', handleCleanerFile);
     console.log('TrendyReels V3.4.1 (COMPLETE FINAL VERSION) initialized!');
 }
 
@@ -860,6 +861,83 @@ if (document.readyState === 'loading') {
 }
 
 window.deleteVideo = deleteVideo;
+
+// ============================================
+// Link Cleaner & Exporter Functions (New Tab)
+// ============================================
+
+function handleCleanerFile() {
+    const fileInput = document.getElementById('cleanerFileInput');
+    const file = fileInput.files[0];
+    if (!file) return alert('Please select a file first.');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        
+        const parsedData = lines.map(line => {
+            const parts = line.split(',').map(s => s.trim());
+            let title = parts[0] || 'Untitled Video';
+            let url = parts.find(p => p.startsWith('http')) || '';
+            let category = parts.find(p => !p.startsWith('http') && p !== title) || 'General';
+            return { title, url, category };
+        }).filter(item => item.url !== '');
+
+        if (parsedData.length === 0) {
+            alert('No valid links found in the file.');
+            return;
+        }
+
+        showCleanerPreview(parsedData);
+    };
+    reader.readAsText(file);
+}
+
+function showCleanerPreview(data) {
+    const container = document.getElementById('cleanerPreviewContainer');
+    const tableDiv = document.getElementById('cleanerPreviewTable');
+    container.style.display = 'block';
+    
+    let html = `<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <tr style="background:#eee; font-weight:bold;"><th>#</th><th>Title</th><th>URL</th><th>Category</th></tr>`;
+    data.forEach((item, i) => {
+        html += `<tr><td>${i+1}</td><td>${item.title}</td><td style="font-size:0.75rem; word-break:break-all;">${item.url}</td><td>${item.category}</td></tr>`;
+    });
+    html += `</table>`;
+    tableDiv.innerHTML = html;
+    
+    document.getElementById('downloadCleanedCsvBtn').style.display = 'inline-block';
+    document.getElementById('downloadCleanedJsonBtn').style.display = 'inline-block';
+    
+    document.getElementById('downloadCleanedCsvBtn').onclick = () => downloadCleanedFile(data, 'csv');
+    document.getElementById('downloadCleanedJsonBtn').onclick = () => downloadCleanedFile(data, 'json');
+}
+
+function downloadCleanedFile(data, format) {
+    let content = '';
+    let filename = 'cleaned_videos.';
+    
+    if (format === 'csv') {
+        filename += 'csv';
+        content = "Title,URL,Category\n";
+        data.forEach(item => {
+            const safeTitle = `"${item.title}"`;
+            content += `${safeTitle},${item.url},${item.category}\n`;
+        });
+    } else if (format === 'json') {
+        filename += 'json';
+        content = JSON.stringify(data, null, 2);
+    }
+    
+    const blob = new Blob([content], { type: format === 'csv' ? 'text/csv' : 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 
 // ============================================
