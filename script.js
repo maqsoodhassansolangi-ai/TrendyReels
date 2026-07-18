@@ -915,6 +915,157 @@ if (document.readyState === 'loading') {
 window.deleteVideo = deleteVideo;
 
 // ============================================
+// Admin Gallery + Global Search (Single Tab)
+// ============================================
+
+let gallerySearchQuery = '';
+let galleryFilterCategory = 'all';
+
+// Dropdown لوڈ کریں
+function loadGalleryDropdowns() {
+    const filterSelect = document.getElementById('galleryCategoryFilter');
+    if (!filterSelect) return;
+    const currentVal = filterSelect.value;
+    filterSelect.innerHTML = '<option value="all">All Categories</option>';
+    state.categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        filterSelect.appendChild(opt);
+    });
+    filterSelect.value = currentVal;
+}
+
+// گیلری رینڈر کریں
+function renderAdminGallery() {
+    const grid = document.getElementById('adminGalleryGrid');
+    if (!grid) return;
+
+    // فلٹر لگائیں
+    let filtered = state.videos;
+    if (galleryFilterCategory !== 'all') {
+        filtered = filtered.filter(v => v.category === galleryFilterCategory);
+    }
+    if (gallerySearchQuery.trim()) {
+        const q = gallerySearchQuery.toLowerCase();
+        filtered = filtered.filter(v => {
+            const titleMatch = (v.title || '').toLowerCase().includes(q);
+            const urlMatch = (v.embed_code || '').toLowerCase().includes(q);
+            return titleMatch || urlMatch;
+        });
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#888;">No videos found.</div>`;
+        return;
+    }
+
+    // کارڈز بنائیں
+    grid.innerHTML = filtered.map(v => {
+        const thumb = v.thumbnail || getThumbnail(v.embed_code) || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect fill="%23ddd"/></svg>';
+        return `
+            <div class="gallery-card" data-id="${v.id}" style="border:1px solid #ddd; border-radius:8px; overflow:hidden; background:white; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                <img src="${thumb}" style="width:100%; height:120px; object-fit:cover;">
+                <div style="padding:10px;">
+                    <div style="font-weight:500; font-size:0.9rem; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.title || 'Untitled'}</div>
+                    <div style="font-size:0.75rem; color:#888;">${v.category || 'Uncategorized'}</div>
+                </div>
+                <div style="position:absolute; top:10px; right:10px;">
+                    <button class="gallery-menu-btn" data-id="${v.id}" style="background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:30px; height:30px; cursor:pointer; font-size:16px; line-height:30px; text-align:center;">⋯</button>
+                    <div class="gallery-menu-options" data-id="${v.id}" style="display:none; position:absolute; right:0; top:35px; background:white; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 8px rgba(0,0,0,0.1); z-index:10; min-width:120px; overflow:hidden;">
+                        <div class="gallery-option" data-action="delete" data-id="${v.id}" style="padding:8px 12px; cursor:pointer; font-size:0.85rem; border-bottom:1px solid #f0f0f0; color:#dc3545;">🗑 Delete</div>
+                        <div class="gallery-option" data-action="changecat" data-id="${v.id}" style="padding:8px 12px; cursor:pointer; font-size:0.85rem;">📂 Change Category</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // "..." مینو کے ایونٹس
+    document.querySelectorAll('.gallery-menu-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const id = this.dataset.id;
+            const menu = document.querySelector(`.gallery-menu-options[data-id="${id}"]`);
+            // باقی سب مینو چھپائیں
+            document.querySelectorAll('.gallery-menu-options').forEach(el => el.style.display = 'none');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        });
+    });
+
+    // مینو کے آپشنز کے ایونٹس
+    document.querySelectorAll('.gallery-option').forEach(opt => {
+        opt.addEventListener('click', async function() {
+            const id = parseInt(this.dataset.id);
+            const action = this.dataset.action;
+            const menu = document.querySelector(`.gallery-menu-options[data-id="${id}"]`);
+            if (menu) menu.style.display = 'none';
+
+            if (action === 'delete') {
+                if (confirm('Delete this video?')) {
+                    await deleteVideo(id);
+                    renderAdminGallery(); // گرڈ ریفریش کریں
+                }
+            } else if (action === 'changecat') {
+                const currentVideo = state.videos.find(v => v.id === id);
+                if (!currentVideo) return;
+                const newCat = prompt(`Enter new category for "${currentVideo.title || 'Untitled'}":`, currentVideo.category || '');
+                if (newCat && newCat.trim() !== '') {
+                    await supabase.patch('videos', { category: newCat.trim() }, id);
+                    await loadVideos();
+                    renderAdminGallery();
+                }
+            }
+        });
+    });
+
+    // اگر کہیں اور کلک کریں تو مینو بند ہو جائے
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.gallery-menu-options').forEach(el => el.style.display = 'none');
+    });
+}
+
+// سرچ اور فلٹر ہینڈل کریں
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('gallerySearchInput');
+    const filterSelect = document.getElementById('galleryCategoryFilter');
+    const searchBtn = document.getElementById('gallerySearchBtn');
+    const resetBtn = document.getElementById('galleryResetBtn');
+
+    function updateGallery() {
+        gallerySearchQuery = searchInput ? searchInput.value : '';
+        galleryFilterCategory = filterSelect ? filterSelect.value : 'all';
+        renderAdminGallery();
+    }
+
+    if (searchInput) searchInput.addEventListener('input', updateGallery);
+    if (filterSelect) filterSelect.addEventListener('change', updateGallery);
+    if (searchBtn) searchBtn.addEventListener('click', updateGallery);
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (searchInput) searchInput.value = '';
+            if (filterSelect) filterSelect.value = 'all';
+            gallerySearchQuery = '';
+            galleryFilterCategory = 'all';
+            renderAdminGallery();
+        });
+    }
+});
+
+// جب Gallery ٹیب پر کلک ہو تو رینڈر اور لوڈ کریں
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.admin-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            if (this.dataset.tab === 'gallery') {
+                loadGalleryDropdowns();
+                renderAdminGallery();
+            }
+        });
+    });
+});
+
+// ============================================
 // Backup & Restore (New Module - inside Settings)
 // ============================================
 
