@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL FIX (Autoplay Removed + Syntax Checked)
+// USER.JS - FINAL FIX (Close Button Fixed)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -26,7 +26,6 @@ function openModernVideoModal(video) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        // ✅ autoplay مکمل ہٹا دیا
         playerHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
@@ -68,8 +67,10 @@ function openModernVideoModal(video) {
         </div>
     `;
 
+    // ✅ پلیئر بنانا (اصلاح شدہ ورژن)
     player.innerHTML = `
         <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
+            <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
             ${playerHtml}
             ${controlsHtml}
         </div>
@@ -86,6 +87,7 @@ function openModernVideoModal(video) {
         ${relatedHtml}
     `;
 
+    // ✅ Close Button (اب یہ کام کرے گا)
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
