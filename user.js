@@ -1,0 +1,189 @@
+// ============================================
+// USER.JS - Phase 1: Player Upgrade + Next/Prev + 10s Seek + Related
+// ============================================
+
+// --- 1. Next / Prev Video Logic ---
+function getAdjacentVideo(direction) {
+    const current = state.currentVideo;
+    if (!current) return null;
+    const currentIndex = state.videos.findIndex(v => v.id === current.id);
+    if (currentIndex === -1) return null;
+    const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex < 0 || newIndex >= state.videos.length) return null;
+    return state.videos[newIndex];
+}
+
+// --- 2. Native Video Player Upgrade (Speed, PiP, Loop) ---
+function upgradeNativeVideo(videoElement) {
+    if (!videoElement) return;
+
+    // Speed Control (0.5x to 2x)
+    const speedContainer = document.createElement('div');
+    speedContainer.style.cssText = 'position:absolute; bottom:70px; right:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:6px; align-items:center;';
+    speedContainer.innerHTML = `
+        <label style="color:white; font-size:12px;">Speed</label>
+        <select id="speedControl" style="background:black; color:white; border:1px solid #555; border-radius:4px; padding:2px 4px; font-size:12px;">
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+        </select>
+    `;
+    videoElement.parentElement.style.position = 'relative';
+    videoElement.parentElement.appendChild(speedContainer);
+
+    document.getElementById('speedControl')?.addEventListener('change', function() {
+        videoElement.playbackRate = parseFloat(this.value);
+    });
+
+    // Picture-in-Picture (PiP) & Loop
+    const controlsContainer = document.createElement('div');
+    controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
+    controlsContainer.innerHTML = `
+        <button id="pipBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🖼️ PiP</button>
+        <button id="loopBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🔁 Loop</button>
+    `;
+    videoElement.parentElement.appendChild(controlsContainer);
+
+    document.getElementById('pipBtn')?.addEventListener('click', () => {
+        if (document.pictureInPictureElement) {
+            document.exitPictureInPicture();
+        } else {
+            videoElement.requestPictureInPicture();
+        }
+    });
+
+    document.getElementById('loopBtn')?.addEventListener('click', () => {
+        videoElement.loop = !videoElement.loop;
+        document.getElementById('loopBtn').style.color = videoElement.loop ? '#4CAF50' : 'white';
+    });
+}
+
+// --- 3. Open Video Modal (Upgraded) ---
+function openModernVideoModal(video) {
+    const modal = $('#videoModal');
+    const player = $('#videoPlayer');
+    const title = $('#modalVideoTitle');
+    const downloadBtn = $('#downloadBtn');
+    const shareBtn = $('#shareBtn');
+
+    // Get Related Videos
+    const related = state.videos
+        .filter(v => v.id !== video.id && v.category === video.category)
+        .slice(0, 4);
+
+    // Build Player
+    let playerHtml = '';
+    if (video.embed_code.trim().startsWith('<video')) {
+        playerHtml = video.embed_code;
+    } else {
+        const embedUrl = extractEmbedUrl(video.embed_code);
+        playerHtml = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+    }
+
+    // Build Related Grid
+    let relatedHtml = '';
+    if (related.length > 0) {
+        relatedHtml = `
+            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                <h4 style="margin-bottom:10px; font-size:1rem;">Related Videos</h4>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
+                    ${related.map(v => `
+                        <div onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}))" style="cursor:pointer; border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
+                            <img src="${getThumbnail(v.embed_code)}" style="width:100%; height:90px; object-fit:cover;">
+                            <div style="padding:6px; font-size:0.75rem; font-weight:500; text-align:center;">${v.title || 'Untitled'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Final HTML
+    player.innerHTML = `
+        <div style="position:relative;">
+            ${playerHtml}
+            <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
+                <div style="display:flex; gap:6px;">
+                    <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
+                    <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button id="shareBtn" class="action-btn">📤 Share</button>
+                    ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
+                </div>
+            </div>
+            ${relatedHtml}
+        </div>
+    `;
+
+    // Add 10s Double-Click Seek
+    const videoEl = player.querySelector('video');
+    if (videoEl) {
+        videoEl.addEventListener('dblclick', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x > rect.width / 2) {
+                this.currentTime += 10;
+            } else {
+                this.currentTime -= 10;
+            }
+        });
+        upgradeNativeVideo(videoEl);
+    }
+
+    // Setup Buttons
+    document.getElementById('prevVideoBtn')?.addEventListener('click', () => {
+        const prev = getAdjacentVideo('prev');
+        if (prev) openModernVideoModal(prev);
+        else alert('No previous video.');
+    });
+
+    document.getElementById('nextVideoBtn')?.addEventListener('click', () => {
+        const next = getAdjacentVideo('next');
+        if (next) openModernVideoModal(next);
+        else alert('No next video.');
+    });
+
+    document.getElementById('shareBtn')?.addEventListener('click', () => {
+        const text = `Check out "${video.title}" on TrendyReels!`;
+        const url = window.location.href;
+        const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
+        if (shareMenu === '1') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        else if (shareMenu === '2') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+        else if (shareMenu === '3') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        else if (shareMenu === '4') {
+            navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
+        }
+    });
+
+    if (video.is_copyright_free) {
+        document.getElementById('downloadBtn')?.addEventListener('click', () => {
+            if (video.embed_code.trim().startsWith('<video')) {
+                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
+                if (srcMatch) window.open(srcMatch[1], '_blank');
+            } else {
+                const embedUrl = extractEmbedUrl(video.embed_code);
+                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                if (ytMatch) window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                else window.open(embedUrl, '_blank');
+            }
+        });
+    }
+
+    title.textContent = video.title || 'Untitled Video';
+    state.currentVideo = video;
+    modal.classList.add('active');
+}
+
+// --- 4. Intercept original modal click ---
+const originalOpen = openVideoModal;
+openVideoModal = function(video) {
+    if (video && video.id) {
+        openModernVideoModal(video);
+    } else {
+        originalOpen(video);
+    }
+};
