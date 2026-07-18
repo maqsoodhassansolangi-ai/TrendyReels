@@ -1,100 +1,198 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrendyReels - Watch Trending Videos</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶️</text></svg>">
-</head>
-<body>
-    <!-- Header -->
-    <header class="main-header">
-        <div class="header-left">
-            <a href="/" class="logo">
-                <span class="logo-icon">▶</span>
-                <span class="logo-text">TrendyReels</span>
-            </a>
-        </div>
-        <div class="header-center">
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search videos..." autocomplete="off">
-                <button id="searchBtn" aria-label="Search">🔍</button>
-            </div>
-        </div>
-        <div class="header-right">
-            <button id="themeToggle" aria-label="Toggle theme">🌙</button>
-        </div>
-    </header>
+// ============================================
+// USER.JS - Phase 1: Player Upgrade + Next/Prev + 10s Seek + Related
+// ============================================
 
-    <!-- Category Pills -->
-    <nav class="category-nav" id="categoryNav">
-        <div class="category-scroll">
-            <button class="category-pill active" data-category="all">All</button>
-        </div>
-    </nav>
+// --- 1. Next / Prev Video Logic ---
+function getAdjacentVideo(direction) {
+    const current = state.currentVideo;
+    if (!current) return null;
+    const currentIndex = state.videos.findIndex(v => v.id === current.id);
+    if (currentIndex === -1) return null;
+    const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex < 0 || newIndex >= state.videos.length) return null;
+    return state.videos[newIndex];
+}
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Video Grid -->
-        <section class="video-grid" id="videoGrid">
-            <!-- Videos rendered by JS -->
-        </section>
-    </main>
+// --- 2. Native Video Player Upgrade (Speed, PiP, Loop) ---
+function upgradeNativeVideo(videoElement) {
+    if (!videoElement) return;
 
-    <!-- Video Player Modal -->
-    <div id="videoModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <div class="video-player-container">
-                <div id="videoPlayer"></div>
-                <div class="video-actions">
-                    <button id="downloadBtn" class="action-btn" style="display:none">⬇ Download</button>
-                    <button id="shareBtn" class="action-btn">📤 Share</button>
+    // Speed Control (0.5x to 2x)
+    const speedContainer = document.createElement('div');
+    speedContainer.style.cssText = 'position:absolute; bottom:70px; right:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:6px; align-items:center;';
+    speedContainer.innerHTML = `
+        <label style="color:white; font-size:12px;">Speed</label>
+        <select id="speedControl" style="background:black; color:white; border:1px solid #555; border-radius:4px; padding:2px 4px; font-size:12px;">
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+        </select>
+    `;
+    videoElement.parentElement.style.position = 'relative';
+    videoElement.parentElement.appendChild(speedContainer);
+
+    document.getElementById('speedControl')?.addEventListener('change', function() {
+        videoElement.playbackRate = parseFloat(this.value);
+    });
+
+    // Picture-in-Picture (PiP) & Loop
+    const controlsContainer = document.createElement('div');
+    controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
+    controlsContainer.innerHTML = `
+        <button id="pipBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🖼️ PiP</button>
+        <button id="loopBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🔁 Loop</button>
+    `;
+    videoElement.parentElement.appendChild(controlsContainer);
+
+    document.getElementById('pipBtn')?.addEventListener('click', () => {
+        if (document.pictureInPictureElement) {
+            document.exitPictureInPicture();
+        } else {
+            videoElement.requestPictureInPicture();
+        }
+    });
+
+    document.getElementById('loopBtn')?.addEventListener('click', () => {
+        videoElement.loop = !videoElement.loop;
+        document.getElementById('loopBtn').style.color = videoElement.loop ? '#4CAF50' : 'white';
+    });
+}
+
+// --- 3. Open Video Modal (Upgraded) ---
+function openModernVideoModal(video) {
+    const modal = $('#videoModal');
+    const player = $('#videoPlayer');
+    const title = $('#modalVideoTitle');
+
+    // Get Related Videos
+    const related = state.videos
+        .filter(v => v.id !== video.id && v.category === video.category)
+        .slice(0, 4);
+
+    // Build Player
+    let playerHtml = '';
+    if (video.embed_code.trim().startsWith('<video')) {
+        playerHtml = video.embed_code;
+    } else {
+        const embedUrl = extractEmbedUrl(video.embed_code);
+        // ✅ سیف iframe (User Gesture Policy کو مدنظر رکھتے ہوئے)
+        playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="autoplay; encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+    }
+
+    // Build Related Grid
+    let relatedHtml = '';
+    if (related.length > 0) {
+        relatedHtml = `
+            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                <h4 style="margin-bottom:10px; font-size:1rem;">Related Videos</h4>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
+                    ${related.map(v => `
+                        <div onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}))" style="cursor:pointer; border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
+                            <img src="${getThumbnail(v.embed_code)}" style="width:100%; height:90px; object-fit:cover;">
+                            <div style="padding:6px; font-size:0.75rem; font-weight:500; text-align:center;">${v.title || 'Untitled'}</div>
+                        </div>
+                    `).join('')}
                 </div>
-                <h3 id="modalVideoTitle" class="modal-title"></h3>
             </div>
+        `;
+    }
+
+    // Final HTML with Close Button Fixed
+    player.innerHTML = `
+        <div style="position:relative;">
+            <!-- ✅ Close Button (Fix) -->
+            <button id="closeModalBtn" style="position:absolute; top:10px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:24px; border-radius:50%; width:40px; height:40px; cursor:pointer; z-index:20; font-family:sans-serif;">&times;</button>
+            
+            ${playerHtml}
+            
+            <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
+                <div style="display:flex; gap:6px;">
+                    <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
+                    <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button id="shareBtn" class="action-btn">📤 Share</button>
+                    ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
+                </div>
+            </div>
+            ${relatedHtml}
         </div>
-    </div>
+    `;
 
-    <!-- Secret Admin Button (Bottom Right, Hidden in plain sight) -->
-    <button id="secretAdminBtn" aria-label="Secret Admin">🔒</button>
+    // ✅ Close Button Functionality
+    document.getElementById('closeModalBtn').onclick = function() {
+        $('#videoModal').classList.remove('active');
+        $('#videoPlayer').innerHTML = '';
+    };
 
-    <!-- NEW FOOTER STARTS HERE -->
-    <footer class="main-footer">
-        <div class="footer-links-row">
-            <a href="sitemap.xml">Sitemap</a>
-            <a href="dmca.html">DMCA</a>
-            <a href="privacy.html">Privacy Policy</a>
-            <a href="about.html">About</a>
-            <a href="contact.html">Contact</a>
-        </div>
-        
-        <div class="footer-icons-row">
-            <!-- Official Gmail Logo (Red & White) -->
-            <a href="mailto:maqsoodhassansolangi@gmail.com" target="_blank" class="social-icon" title="Email">
-                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path fill="#EA4335" d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V8.273L12 13.091 5.455 8.273v12.729H1.636C.732 21 0 20.268 0 19.364V5.457c0-.904.732-1.636 1.636-1.636h2.727L12 10.182l7.637-6.364h2.727C24 3.82 24 4.553 24 5.457z"/><path fill="#4285F4" d="M5.455 8.273v12.727h3.818V9.818L5.455 8.273z"/><path fill="#34A853" d="M14.727 9.818v11.182h3.818V8.273l-3.818 1.545z"/><path fill="#FBBC05" d="M0 5.457L12 13.091 24 5.457v1.909l-12 7.636L0 7.366V5.457z"/></svg>
-            </a>
-            <!-- Official WhatsApp Logo (Green & White) -->
-            <a href="https://wa.me/923062948990" target="_blank" class="social-icon" title="WhatsApp">
-                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path fill="#25D366" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.5s-.577.038-.743.147c-.166.109-1.025.981-1.422 1.416-.397.435-.755.911-.755 1.816s.729 2.124.819 2.273c.09.149 1.427 2.183 2.896 2.998 1.47.815 1.777.611 2.101.611s1.002-.162 1.558-.383c.556-.221 1.211-.616 1.461-1.033.25-.417.25-.778.176-1.033-.074-.255-.666-.98-.93-1.297-.263-.317-.547-.411-.853-.482z"/><path fill="#25D366" d="M12 2C6.477 2 2 6.477 2 12c0 1.897.522 3.67 1.419 5.196L2 22l4.71-1.318C8.17 21.52 9.99 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.759 0-3.397-.57-4.713-1.525l-.338-.223-2.858.829.829-2.846-.223-.338C4.204 15.098 4 14.088 4 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/></svg>
-            </a>
-        </div>
-        
-        <div class="footer-bottom-text">
-            <p>Developed by MH Developers</p>
-            <p>&copy; 2026 TrendyReels — All Rights Reserved</p>
-        </div>
-    </footer>
-    <!-- NEW FOOTER ENDS HERE -->
+    // Add 10s Double-Click Seek
+    const videoEl = player.querySelector('video');
+    if (videoEl) {
+        videoEl.addEventListener('dblclick', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x > rect.width / 2) {
+                this.currentTime += 10;
+            } else {
+                this.currentTime -= 10;
+            }
+        });
+        upgradeNativeVideo(videoEl);
+    }
 
-    <script src="script.js"></script>
-    <script src="user.js"></script>
+    // Setup Buttons
+    document.getElementById('prevVideoBtn')?.addEventListener('click', () => {
+        const prev = getAdjacentVideo('prev');
+        if (prev) openModernVideoModal(prev);
+        else alert('No previous video.');
+    });
 
-    <!-- Eruda Console for Mobile Debugging -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+    document.getElementById('nextVideoBtn')?.addEventListener('click', () => {
+        const next = getAdjacentVideo('next');
+        if (next) openModernVideoModal(next);
+        else alert('No next video.');
+    });
 
-</body>
-</html>
+    document.getElementById('shareBtn')?.addEventListener('click', () => {
+        const text = `Check out "${video.title}" on TrendyReels!`;
+        const url = window.location.href;
+        const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
+        if (shareMenu === '1') window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        else if (shareMenu === '2') window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+        else if (shareMenu === '3') window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        else if (shareMenu === '4') {
+            navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
+        }
+    });
+
+    if (video.is_copyright_free) {
+        document.getElementById('downloadBtn')?.addEventListener('click', () => {
+            if (video.embed_code.trim().startsWith('<video')) {
+                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
+                if (srcMatch) window.open(srcMatch[1], '_blank');
+            } else {
+                const embedUrl = extractEmbedUrl(video.embed_code);
+                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                if (ytMatch) window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                else window.open(embedUrl, '_blank');
+            }
+        });
+    }
+
+    title.textContent = video.title || 'Untitled Video';
+    state.currentVideo = video;
+    modal.classList.add('active');
+}
+
+// --- 4. Intercept original modal click ---
+const originalOpen = openVideoModal;
+openVideoModal = function(video) {
+    if (video && video.id) {
+        openModernVideoModal(video);
+    } else {
+        originalOpen(video);
+    }
+};
