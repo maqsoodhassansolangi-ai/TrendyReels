@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - Phase 1: Player Upgrade (FINAL VERSION)
+// USER.JS - Phase 1: Final (Fullscreen + PiP Added)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -36,23 +36,35 @@ function upgradeNativeVideo(videoElement) {
         videoElement.playbackRate = parseFloat(this.value);
     });
 
-    // PiP & Loop
+    // PiP Button
     const controlsContainer = document.createElement('div');
     controlsContainer.style.cssText = 'position:absolute; bottom:70px; left:15px; background:rgba(0,0,0,0.7); padding:4px 10px; border-radius:6px; z-index:10; display:flex; gap:8px; align-items:center;';
     controlsContainer.innerHTML = `
+        <button id="fullscreenBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">⛶ Fullscreen</button>
         <button id="pipBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🖼️ PiP</button>
         <button id="loopBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:14px;">🔁 Loop</button>
     `;
     videoElement.parentElement.appendChild(controlsContainer);
 
+    // Fullscreen
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            videoElement.parentElement.requestFullscreen().catch(err => {});
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // PiP
     document.getElementById('pipBtn').addEventListener('click', () => {
         if (document.pictureInPictureElement) {
             document.exitPictureInPicture();
         } else {
-            videoElement.requestPictureInPicture();
+            videoElement.requestPictureInPicture().catch(err => {});
         }
     });
 
+    // Loop
     document.getElementById('loopBtn').addEventListener('click', () => {
         videoElement.loop = !videoElement.loop;
         document.getElementById('loopBtn').style.color = videoElement.loop ? '#4CAF50' : 'white';
