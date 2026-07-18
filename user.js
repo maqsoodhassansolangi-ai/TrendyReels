@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL FIX (Direct Player Injection)
+// USER.JS - FINAL PHASE 1 (Auto-Rotate + YouTube-like Controls)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -13,11 +13,9 @@ function getAdjacentVideo(direction) {
 }
 
 function openModernVideoModal(video) {
-    // پہلے موڈل کھولیں
     const modal = document.getElementById('videoModal');
     modal.classList.add('active');
-    
-    // پھر پلیئر بنائیں
+
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
 
@@ -30,7 +28,6 @@ function openModernVideoModal(video) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        // ✅ sandbox کے ساتھ iframe (سیکیورٹی کے لیے)
         playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
@@ -51,9 +48,9 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // کنٹرولز
+    // ✅ YouTube-style Controls with Auto-hide
     const controlsHtml = `
-        <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
+        <div class="yt-controls-overlay" id="ytControlsOverlay">
             <div style="display:flex; gap:12px; align-items:center;">
                 <select id="speedControl" style="background:transparent; color:white; border:1px solid #888; border-radius:4px; padding:2px 6px; font-size:12px; outline:none;">
                     <option value="0.5">0.5x</option>
@@ -72,9 +69,8 @@ function openModernVideoModal(video) {
         </div>
     `;
 
-    // موڈل کے اندر پلیئر ڈالیں
     player.innerHTML = `
-        <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
+        <div class="video-player-container" id="videoPlayerContainer">
             <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
             ${playerHtml}
             ${controlsHtml}
@@ -92,24 +88,30 @@ function openModernVideoModal(video) {
         ${relatedHtml}
     `;
 
-    // کلوز بٹن
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    // کنٹرولز
     document.getElementById('speedControl').addEventListener('change', function() {
         const video = player.querySelector('video');
         if (video) video.playbackRate = parseFloat(this.value);
     });
 
+    // ✅ Auto-Rotate on Fullscreen (موبائل کو گھمائے گا)
     document.getElementById('fullscreenBtn').addEventListener('click', function() {
-        const container = player.querySelector('.video-player-container');
+        const container = document.getElementById('videoPlayerContainer');
         if (!document.fullscreenElement) {
             container.requestFullscreen().catch(err => {});
+            // موبائل کو خود بخود گھمانے کے لیے
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(err => {});
+            }
         } else {
             document.exitFullscreen();
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
         }
     });
 
@@ -132,7 +134,6 @@ function openModernVideoModal(video) {
         }
     });
 
-    // 10s ڈبل کلک
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
