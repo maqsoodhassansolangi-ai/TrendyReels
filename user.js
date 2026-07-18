@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL PHASE 1 (Mobile Play Fix)
+// USER.JS - FINAL FIX (Autoplay Removed + Syntax Checked)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -17,7 +17,6 @@ function openModernVideoModal(video) {
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
 
-    // Get Related Videos
     const related = state.videos
         .filter(v => v.id !== video.id && v.category === video.category)
         .slice(0, 4);
@@ -27,8 +26,8 @@ function openModernVideoModal(video) {
         playerHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        // Android Chrome fix: autoplay کو ہٹا دیا، اور allow کو صحیح کیا
-        playerHtml = `<iframe src="${embedUrl}" allow="encrypted-media; fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+        // ✅ autoplay مکمل ہٹا دیا
+        playerHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
     }
 
     let relatedHtml = '';
@@ -48,7 +47,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // Controls (YouTube style)
+    // Controls
     const controlsHtml = `
         <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px); pointer-events:auto;">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -69,7 +68,6 @@ function openModernVideoModal(video) {
         </div>
     `;
 
-    // پلیئر کو لوڈ کریں
     player.innerHTML = `
         <div class="video-player-container" style="position:relative; width:100%; background:black; aspect-ratio:16/9; overflow:hidden; border-radius:8px;">
             ${playerHtml}
@@ -88,19 +86,16 @@ function openModernVideoModal(video) {
         ${relatedHtml}
     `;
 
-    // Close Button (اب کراس بٹن کام کرے گا)
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    // Speed Control
     document.getElementById('speedControl').addEventListener('change', function() {
         const video = player.querySelector('video');
         if (video) video.playbackRate = parseFloat(this.value);
     });
 
-    // Fullscreen Button
     document.getElementById('fullscreenBtn').addEventListener('click', function() {
         const container = player.querySelector('.video-player-container');
         if (!document.fullscreenElement) {
@@ -110,7 +105,6 @@ function openModernVideoModal(video) {
         }
     });
 
-    // PiP Button
     document.getElementById('pipBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
@@ -122,7 +116,6 @@ function openModernVideoModal(video) {
         }
     });
 
-    // Loop Button
     document.getElementById('loopBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
@@ -131,7 +124,6 @@ function openModernVideoModal(video) {
         }
     });
 
-    // Double-click Seek (10s)
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -145,7 +137,6 @@ function openModernVideoModal(video) {
         });
     }
 
-    // Prev / Next
     document.getElementById('prevVideoBtn').addEventListener('click', () => {
         const prev = getAdjacentVideo('prev');
         if (prev) openModernVideoModal(prev);
@@ -158,7 +149,6 @@ function openModernVideoModal(video) {
         else alert('No next video.');
     });
 
-    // Share
     document.getElementById('shareBtn').addEventListener('click', () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
@@ -174,7 +164,6 @@ function openModernVideoModal(video) {
         }
     });
 
-    // Download
     if (video.is_copyright_free) {
         document.getElementById('downloadBtn').addEventListener('click', () => {
             if (video.embed_code.trim().startsWith('<video')) {
@@ -204,4 +193,4 @@ openVideoModal = function(video) {
     } else {
         originalOpen(video);
     }
-};
+}
