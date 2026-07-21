@@ -140,7 +140,18 @@ body.dark-mode .category-pill:hover { background: #3F3F3F; }
 
 /* Main Content */
 .main-content { flex: 1; padding: 20px; max-width: 1400px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; }
-
+/* ایڈز کی جگہ کو ظاہر کرنے کے لیے */
+.ad-placeholder {
+    min-height: 50px;
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    margin: 10px 0;
+    text-align: center;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #888;
+}
 /* Video Grid */
 .video-grid {
     display: grid;
