@@ -1,7 +1,41 @@
 // ============================================
-// USER.JS - FINAL PHASE 1 (Rotate + Lock Buttons)
+// USER.JS - FINAL PHASE 1 (Rotate + Lock + Ads)
 // ============================================
 
+// --- Ads Loader (New Function) ---
+async function loadUserAds() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/ad_slots?select=*&enabled=eq.true`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const data = await response.json();
+        if (!data || data.length === 0) return;
+
+        const isMobile = window.innerWidth < 768;
+
+        data.forEach(slot => {
+            const container = document.getElementById(`ad-${slot.name}`);
+            if (!container) return;
+
+            // اگر موبائل ہے تو mobileCode ورنہ desktopCode
+            const adCode = isMobile ? (slot.mobileCode || slot.desktopCode) : (slot.desktopCode || slot.mobileCode);
+            
+            if (adCode && adCode.trim() !== '') {
+                container.style.display = 'block';
+                container.innerHTML = adCode;
+            } else {
+                container.style.display = 'none';
+            }
+        });
+    } catch (error) {
+        console.error('Ads loading failed:', error);
+    }
+}
+
+// --- Adjacent Video Navigation ---
 function getAdjacentVideo(direction) {
     const current = state.currentVideo;
     if (!current) return null;
@@ -12,6 +46,7 @@ function getAdjacentVideo(direction) {
     return state.videos[newIndex];
 }
 
+// --- Modern Video Modal (with all controls) ---
 function openModernVideoModal(video) {
     const modal = document.getElementById('videoModal');
     modal.classList.add('active');
@@ -48,7 +83,7 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // ✅ YouTube-style Controls (Transparent + Rotate + Lock)
+    // YouTube-style Controls
     const controlsHtml = `
         <div class="yt-controls-overlay" id="ytControlsOverlay">
             <div style="display:flex; gap:12px; align-items:center;">
@@ -100,12 +135,11 @@ function openModernVideoModal(video) {
         if (video) video.playbackRate = parseFloat(this.value);
     });
 
-    // ✅ Fullscreen (with Auto-Rotate attempt)
+    // Fullscreen
     document.getElementById('fullscreenBtn').addEventListener('click', function() {
         const container = document.getElementById('videoPlayerContainer');
         if (!document.fullscreenElement) {
             container.requestFullscreen().catch(err => {});
-            // براؤزر روٹیٹ کی کوشش کریں
             if (screen.orientation && screen.orientation.lock) {
                 screen.orientation.lock('landscape').catch(() => {});
             }
@@ -117,7 +151,7 @@ function openModernVideoModal(video) {
         }
     });
 
-    // ✅ Rotate Button (Manual rotate with lock)
+    // Rotate
     document.getElementById('rotateBtn').addEventListener('click', function() {
         if (screen.orientation && screen.orientation.lock) {
             screen.orientation.lock('landscape').then(() => {
@@ -127,7 +161,7 @@ function openModernVideoModal(video) {
         }
     });
 
-    // ✅ Lock Button (Toggle lock)
+    // Lock
     document.getElementById('lockBtn').addEventListener('click', function() {
         if (!document.fullscreenElement) {
             const container = document.getElementById('videoPlayerContainer');
@@ -141,6 +175,7 @@ function openModernVideoModal(video) {
         }
     });
 
+    // PiP
     document.getElementById('pipBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
@@ -152,6 +187,7 @@ function openModernVideoModal(video) {
         }
     });
 
+    // Loop
     document.getElementById('loopBtn').addEventListener('click', function() {
         const video = player.querySelector('video');
         if (video) {
@@ -160,6 +196,7 @@ function openModernVideoModal(video) {
         }
     });
 
+    // Double-click seek
     const videoEl = player.querySelector('video');
     if (videoEl) {
         videoEl.addEventListener('dblclick', function(e) {
@@ -221,153 +258,18 @@ function openModernVideoModal(video) {
     state.currentVideo = video;
 }
 
-// ============================================
-// PHASE 2 - NEW: FRONTEND ADS + MID-ROLL + DOWNLOAD POPUP + AUTO-PLAY
-// ============================================
+// --- Override original openVideoModal with modern version ---
+window.openVideoModal = openModernVideoModal;
 
-// --- 1. ڈیوائس ڈیٹیکشن ---
-function isMobileDevice() {
-    return window.innerWidth < 768 || /Mobi|Android/i.test(navigator.userAgent);
-}
+// --- Initialise Ads on Page Load ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Load ads after everything is ready
+    setTimeout(loadUserAds, 500);
+});
 
-// --- 2. فرنٹ اینڈ پر ایڈز لوڈ کریں ---
-async function loadFrontendAds() {
-    const adSlots = state.adSlots;
-    if (!adSlots || adSlots.length === 0) return;
-
-    const headerAd = adSlots.find(s => s.name === 'header');
-    const sidebarAd = adSlots.find(s => s.name === 'sidebar');
-
-    // ہیڈر ایڈ
-    const headerDiv = document.getElementById('header-ad');
-    if (headerDiv && headerAd && headerAd.enabled) {
-        const code = isMobileDevice() ? headerAd.mobileCode : headerAd.desktopCode;
-        if (code) {
-            headerDiv.innerHTML = code;
-            headerDiv.style.display = 'block';
-        }
-    }
-
-    // سائیڈبار ایڈ
-    const sidebarDiv = document.getElementById('sidebar-ad');
-    if (sidebarDiv && sidebarAd && sidebarAd.enabled) {
-        const code = isMobileDevice() ? sidebarAd.mobileCode : sidebarAd.desktopCode;
-        if (code) {
-            sidebarDiv.innerHTML = code;
-            sidebarDiv.style.display = 'block';
-        }
-    }
-}
-
-// --- 3. مڈ رول ایڈ (ویڈیو کے دوران) ---
-let midRollTimer = null;
-let midRollAdShown = false;
-
-function setupMidRollAd(videoElement) {
-    if (!videoElement) return;
-    midRollAdShown = false;
-
-    videoElement.addEventListener('timeupdate', function() {
-        // 30 سیکنڈ پر ایڈ دکھائیں (اگر پہلے نہیں دکھائی گئی)
-        if (!midRollAdShown && this.currentTime >= 30) {
-            midRollAdShown = true;
-            this.pause();
-
-            // ایک عارضی اوورلے بنائیں
-            const overlay = document.createElement('div');
-            overlay.id = 'midRollOverlay';
-            overlay.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:50; display:flex; flex-direction:column; justify-content:center; align-items:center;';
-
-            // ایڈ کوڈ لوڈ کریں
-            const midRollAd = state.adSlots.find(s => s.name === 'video_midroll');
-            const adCode = midRollAd && midRollAd.enabled ? (isMobileDevice() ? midRollAd.mobileCode : midRollAd.desktopCode) : '';
-
-            overlay.innerHTML = `
-                <div style="background:white; padding:20px; border-radius:12px; max-width:90%; text-align:center;">
-                    <h3 style="margin-bottom:15px;">Advertisement</h3>
-                    ${adCode || '<p>Ad placeholder</p>'}
-                    <button id="skipMidRollBtn" style="margin-top:15px; padding:10px 20px; background:#4CAF50; color:white; border:none; border-radius:6px; cursor:pointer;">Skip Ad</button>
-                </div>
-            `;
-
-            // اوورلے کو ویڈیو کنٹینر میں شامل کریں
-            const container = videoElement.closest('.video-player-container');
-            if (container) container.appendChild(overlay);
-
-            // Skip بٹن کا ایونٹ
-            document.getElementById('skipMidRollBtn')?.addEventListener('click', function() {
-                const overlayEl = document.getElementById('midRollOverlay');
-                if (overlayEl) overlayEl.remove();
-                videoElement.play();
-            });
-
-            // 5 سیکنڈ بعد خود بخود سکپ
-            setTimeout(() => {
-                const overlayEl = document.getElementById('midRollOverlay');
-                if (overlayEl && overlayEl.parentNode) {
-                    overlayEl.remove();
-                    videoElement.play();
-                }
-            }, 5000);
-        }
-    });
-}
-
-// --- 4. ڈاؤن لوڈ پاپ اپ ایڈ ---
-function showDownloadAdPopup(video) {
-    // پاپ اپ بنائیں
-    const popup = document.createElement('div');
-    popup.id = 'downloadAdPopup';
-    popup.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; display:flex; justify-content:center; align-items:center;';
-
-    const downloadAd = state.adSlots.find(s => s.name === 'download_popup');
-    const adCode = downloadAd && downloadAd.enabled ? (isMobileDevice() ? downloadAd.mobileCode : downloadAd.desktopCode) : '';
-
-    popup.innerHTML = `
-        <div style="background:white; padding:25px; border-radius:16px; max-width:90%; text-align:center; position:relative;">
-            <h3 style="margin-bottom:10px;">⏳ Please wait...</h3>
-            <p style="margin-bottom:15px; color:#666;">Your video is preparing for download.</p>
-            ${adCode || '<div style="padding:20px; background:#f0f0f0; border-radius:8px;">Ad placeholder</div>'}
-            <button id="closeDownloadPopupBtn" style="margin-top:15px; padding:10px 25px; background:#2196F3; color:white; border:none; border-radius:6px; cursor:pointer;">Continue</button>
-        </div>
-    `;
-
-    document.body.appendChild(popup);
-
-    // بٹن کا ایونٹ
-    document.getElementById('closeDownloadPopupBtn')?.addEventListener('click', function() {
-        const popupEl = document.getElementById('downloadAdPopup');
-        if (popupEl) popupEl.remove();
-        downloadVideo(video);
-    });
-}
-
-// --- 5. آٹو پلے (ویڈیو ختم ہونے پر اگلی ویڈیو) ---
-function setupAutoPlay(videoElement) {
-    if (!videoElement) return;
-    videoElement.addEventListener('ended', function() {
-        const next = getAdjacentVideo('next');
-        if (next) {
-            openModernVideoModal(next);
-        } else {
-            alert('No more videos in this list.');
-        }
-    });
-}
-
-// --- 6. ویڈیو ڈاؤن لوڈ فنکشن ---
-function downloadVideo(video) {
-    if (video.embed_code.trim().startsWith('<video')) {
-        const srcMatch = video.embed_code.match(/src="([^"]+)"/);
-        if (srcMatch) window.open(srcMatch[1], '_blank');
-    } else {
-        const embedUrl = extractEmbedUrl(video.embed_code);
-        const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-        if (ytMatch) {
-            window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
-        } else {
-            window.open(embedUrl, '_blank');
-        }
-    }
-}
-
+// --- Also reload ads when window resizes (for mobile/desktop switch) ---
+let resizeTimer;
+window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(loadUserAds, 300);
+});
