@@ -915,36 +915,6 @@ if (document.readyState === 'loading') {
 window.deleteVideo = deleteVideo;
 
 // ============================================
-// ADDED: NEW ADMIN ACCESS METHOD (LONG PRESS ON LOGO)
-// ============================================
-
-// ----- موبائل کے لیے لوگو پر 5 سیکنڈ Long Press (خفیہ ایڈمن) -----
-let longPressTimer;
-
-const logoElement = document.querySelector('.logo');
-
-if (logoElement) {
-    logoElement.addEventListener('touchstart', (e) => {
-        longPressTimer = setTimeout(() => {
-            const password = prompt('🔐 Enter Admin Password:');
-            if (password === ADMIN_PASSWORD) {
-                window.location.href = 'admin.html';
-            } else {
-                alert('❌ Wrong password!');
-            }
-        }, 5000); // 5 سیکنڈ (5000 ملی سیکنڈ)
-    });
-
-    logoElement.addEventListener('touchend', () => {
-        clearTimeout(longPressTimer);
-    });
-
-    logoElement.addEventListener('touchmove', () => {
-        clearTimeout(longPressTimer);
-    });
-}
-
-// ============================================
 // Admin Gallery + Global Search (Single Tab)
 // ============================================
 
