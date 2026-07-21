@@ -371,19 +371,3 @@ function downloadVideo(video) {
     }
 }
 
-// --- 7. ڈاؤن لوڈ بٹن کو نئے ورژن سے تبدیل کریں ---
-document.addEventListener('DOMContentLoaded', () => {
-    const downloadBtn = document.getElementById('downloadBtn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const current = state.currentVideo;
-            if (current && current.is_copyright_free) {
-                showDownloadAdPopup(current);
-            }
-        });
-    }
-});
-
-// --- 8. init کے اندر ایڈز لوڈ کریں (پہلے سے موجود init کے ساتھ ضم ہو جائے گا) ---
-// ہم اسے init کے آخر میں کال کریں گے
