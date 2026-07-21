@@ -27,7 +27,10 @@
             <button id="themeToggle" aria-label="Toggle theme">🌙</button>
         </div>
     </header>
-<div id="header-ad" class="ad-placeholder" style="display:none; margin:10px 0; text-align:center;"></div>
+
+    <!-- ===== NEW: Adsterra Ad Slot - Header ===== -->
+    <div id="ad-slot-header" class="ad-container" style="margin:10px auto; text-align:center; min-height:50px; width:100%;"></div>
+
     <!-- Category Pills -->
     <nav class="category-nav" id="categoryNav">
         <div class="category-scroll">
@@ -35,14 +38,19 @@
         </div>
     </nav>
 
+    <!-- ===== NEW: Adsterra Ad Slot - Video Top ===== -->
+    <div id="ad-slot-video_top" class="ad-container" style="margin:15px auto; text-align:center; min-height:50px; width:100%;"></div>
+
     <!-- Main Content -->
     <main class="main-content">
-        <div id="sidebar-ad" class="ad-placeholder" style="display:none; margin:10px 0; text-align:center;"></div>
         <!-- Video Grid -->
         <section class="video-grid" id="videoGrid">
             <!-- Videos rendered by JS -->
         </section>
     </main>
+
+    <!-- ===== NEW: Adsterra Ad Slot - Video Bottom ===== -->
+    <div id="ad-slot-video_bottom" class="ad-container" style="margin:15px auto; text-align:center; min-height:50px; width:100%;"></div>
 
     <!-- Video Player Modal -->
     <div id="videoModal" class="modal">
@@ -61,6 +69,9 @@
 
     <!-- Secret Admin Button (Bottom Right, Hidden in plain sight) -->
     <button id="secretAdminBtn" aria-label="Secret Admin">🔒</button>
+
+    <!-- ===== NEW: Adsterra Ad Slot - Footer ===== -->
+    <div id="ad-slot-footer" class="ad-container" style="margin:20px auto; text-align:center; min-height:50px; width:100%;"></div>
 
     <!-- NEW FOOTER STARTS HERE -->
     <footer class="main-footer">
@@ -90,12 +101,32 @@
     </footer>
     <!-- NEW FOOTER ENDS HERE -->
 
-        <script src="script.js"></script>
+    <!-- ===== NEW: Adsterra Ad Slot - Sidebar (اگر آپ کے پاس سائیڈبار ہے تو اسے وہاں رکھیں) ===== -->
+    <!-- یہ تب کام کرے گا جب آپ اسے کسی سائیڈبار ڈیو میں رکھیں گے -->
+    <!-- <div id="ad-slot-sidebar" class="ad-container" style="text-align:center; min-height:50px;"></div> -->
+
+    <!-- ===== NEW: Adsterra Ad Slot - Mobile ===== -->
+    <!-- یہ موبائل پر علیحدہ ایڈ دکھانے کے لیے -->
+    <div id="ad-slot-mobile" class="ad-container" style="text-align:center; min-height:50px; display:none;"></div>
+
+    <!-- ===== NEW: Adsterra Ad Slot - Sticky ===== -->
+    <!-- نیچے چپکنے والا ایڈ -->
+    <div id="ad-slot-sticky" style="position:fixed; bottom:0; left:0; width:100%; z-index:999; text-align:center; background:white; box-shadow:0 -2px 8px rgba(0,0,0,0.1); display:none;"></div>
+
+    <!-- ===== NEW: Adsterra Ad Slot - Popup ===== -->
+    <!-- پاپ اپ کے لیے -->
+    <div id="ad-slot-popup" style="display:none;"></div>
+
+    <!-- ===== NEW: Adsterra Loader Script (سب سے اہم) ===== -->
+    <!-- یہ اسکرپٹ ایڈمن پینل میں سیو کردہ ایڈ کوڈز کو خود بخود لوڈ کرے گا -->
+    <script src="adsterra-loader.js"></script>
+
+    <script src="script.js"></script>
     <script type="text/javascript" src="user.js"></script>
 
     <!-- Eruda Console for Mobile Debugging -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
 
 </body>
 </html>
