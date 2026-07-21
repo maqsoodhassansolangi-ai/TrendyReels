@@ -828,13 +828,15 @@ function handleSearch(query) {
 async function init() {
     applyTheme();
     await loadCategories();
-    await loadVideos();
-    loadFilterDropdowns();
-    // loadVideos کے اندر شامل کریں:
+await loadVideos();
+
+await loadAdSlots();             // ← یہ پہلے آئے گا
+loadFrontendAds();               // ← یہ اس کے بعد آئے گا
+
+loadFilterDropdowns();
 loadBulkCategoryDropdown();
-    loadBulkDeleteDropdown();
-    await loadAdSlots();
-    initSecretAdmin();
+loadBulkDeleteDropdown();
+initSecretAdmin();
     const searchInput = $('#searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
