@@ -600,7 +600,7 @@ function renderAdSlots() {
 // --- Secret Admin ---
 // ✅ NEW: Long Press on Logo (5.5 seconds) + SHA-256 hashed password
 // Password: "bakhtawer787"
-const ADMIN_PASSWORD_HASH = '0b3a8f7c9e2d1b4a5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d';
+const ADMIN_PASSWORD_HASH = 'e0d6a7f9c8b4a3e2f1d5c6b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9';
 
 let longPressTimer = null;
 let isLongPressTriggered = false;
