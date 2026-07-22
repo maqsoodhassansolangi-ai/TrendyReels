@@ -43,7 +43,7 @@ function renderHistory() {
     }
     section.style.display = 'block';
     grid.innerHTML = history.map(v => `
-        <div class="history-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}))">
+        <div class="history-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}), true)">
             <img class="history-thumb" src="${v.thumbnail || 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'90\'><rect fill=\'%23ccc\'/></svg>'}" alt="${v.title}">
             <div class="history-title">${v.title || 'Untitled'}</div>
         </div>
@@ -71,7 +71,7 @@ function initAutoComplete() {
             return;
         }
         suggestions.innerHTML = matches.map(v => `
-            <div class="search-suggestion-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id})); document.getElementById('searchSuggestions').style.display='none'">
+            <div class="search-suggestion-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}), true); document.getElementById('searchSuggestions').style.display='none'">
                 ${v.title}
             </div>
         `).join('');
@@ -117,55 +117,73 @@ function copyVideoLink(url) {
 }
 
 // ============================================
-// OPEN MODERN VIDEO MODAL (with all new features)
+// OPEN MODERN VIDEO MODAL (NEW REELS MODE WITH SWIPE)
 // ============================================
 
-function openModernVideoModal(video) {
+let reelsQueue = [];
+let currentReelIndex = 0;
+let touchStartY = 0;
+let isSwiping = false;
+
+function openModernVideoModal(video, fromReels = true) {
+    if (fromReels) {
+        // ساری ویڈیوز کو ریلز کی قطار میں ڈالیں
+        reelsQueue = state.videos.filter(v => v.id !== video.id);
+        reelsQueue.unshift(video); // موجودہ ویڈیو کو پہلے رکھیں
+        currentReelIndex = 0;
+        
+        const modal = document.getElementById('videoModal');
+        modal.classList.add('active');
+        window.history.pushState({ modalOpen: true }, '');
+        loadReel(0);
+        return;
+    }
+
+    // اگر fromReels = false ہو تو پرانا نارمل موڈ (آپ چاہیں تو استعمال کر سکتے ہیں)
     const modal = document.getElementById('videoModal');
     modal.classList.add('active');
+    // پرانا کوڈ یہاں رکھ سکتے ہیں (اگر ضرورت ہو)
+}
 
+// ============================================
+// LOAD REEL (SINGLE VIDEO WITH SWIPE)
+// ============================================
+
+function loadReel(index) {
+    if (reelsQueue.length === 0) return;
+    if (index < 0) index = reelsQueue.length - 1;
+    if (index >= reelsQueue.length) index = 0;
+    currentReelIndex = index;
+    
+    const video = reelsQueue[index];
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
-
-    // ✅ Add to history
-    addToHistory(video);
-
-    const related = state.videos
-        .filter(v => v.id !== video.id && v.category === video.category)
-        .slice(0, 4);
-
-    let playerHtml = '';
+    const downloadBtn = document.getElementById('downloadBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    
+    // پہلے پلیئر کو خالی کریں
+    player.innerHTML = '';
+    
+    // ویڈیو ایمبیڈ کریں
+    let embedHtml = '';
     if (video.embed_code.trim().startsWith('<video')) {
-        playerHtml = video.embed_code;
+        embedHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        playerHtml = `<iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+        embedHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="eager" frameborder="0" allowfullscreen></iframe>`;
     }
-
-    let relatedHtml = '';
-    if (related.length > 0) {
-        relatedHtml = `
-            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
-                <h4 style="margin-bottom:10px; font-size:1rem;">Related Videos</h4>
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
-                    ${related.map(v => `
-                        <div onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}))" style="cursor:pointer; border:1px solid #eee; border-radius:6px; overflow:hidden; background:white;">
-                            <img src="${getThumbnail(v.embed_code)}" style="width:100%; height:90px; object-fit:cover;">
-                            <div style="padding:6px; font-size:0.75rem; font-weight:500; text-align:center;">${v.title || 'Untitled'}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    // ✅ COMPLETE YouTube-style Controls (Play/Pause + All others) - FULLY TRANSPARENT
-    const controlsHtml = `
-        <div class="yt-controls-overlay" id="ytControlsOverlay">
-            <div style="display:flex; gap:12px; align-items:center; width:100%; justify-content:space-between;">
+    
+    // مکمل اسکرین کنٹرولز کے ساتھ پلیئر (9:16 aspect ratio for Reels)
+    player.innerHTML = `
+        <div class="video-player-container" id="videoPlayerContainer" style="position:relative; width:100%; aspect-ratio:9/16; background:#000; border-radius:8px; overflow:hidden;">
+            <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
+            ${embedHtml}
+            <!-- YouTube-style Controls -->
+            <div class="yt-controls-overlay" style="position:absolute; bottom:15px; left:15px; right:15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.5); padding:6px 12px; border-radius:30px; z-index:30; backdrop-filter:blur(4px);">
                 <div style="display:flex; gap:12px; align-items:center;">
-                    <button class="yt-btn" id="playPauseBtn" style="background:transparent; border:none; color:white; font-size:22px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">▶</button>
-                    <select id="speedControl" style="background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:2px 6px; font-size:12px; outline:none; cursor:pointer;">
+                    <button class="yt-btn" id="playPauseBtn" style="background:transparent; border:none; color:white; font-size:22px; cursor:pointer;">▶</button>
+                    <select id="speedControl" style="background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:2px 6px; font-size:12px;">
                         <option value="0.5">0.5x</option>
                         <option value="0.75">0.75x</option>
                         <option value="1" selected>1x</option>
@@ -175,62 +193,71 @@ function openModernVideoModal(video) {
                     </select>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center;">
-                    <button class="yt-btn" id="rotateBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔄</button>
-                    <button class="yt-btn" id="lockBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔒</button>
-                    <button class="yt-btn" id="fullscreenBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">⛶</button>
-                    <button class="yt-btn" id="pipBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🖼️</button>
-                    <button class="yt-btn" id="loopBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔁</button>
+                    <button class="yt-btn" id="fullscreenBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer;">⛶</button>
                 </div>
             </div>
         </div>
     `;
-
-    // ✅ NEW: Progress Bar + Time Display
-    const progressHtml = `
-        <div class="custom-progress-container" id="customProgressContainer">
-            <div class="custom-progress-bar" id="customProgressBar"></div>
-        </div>
-        <div class="custom-time-display">
-            <span id="customCurrentTime">0:00</span>
-            <span id="customDuration">0:00</span>
-        </div>
-    `;
-
-    // ✅ NEW: Copy Link button
-    const copyLinkHtml = `
-        <button id="copyLinkBtn" class="action-btn" style="background:transparent; border:1px solid #666; color:white;">🔗 Copy Link</button>
-    `;
-
-    player.innerHTML = `
-        <div class="video-player-container" id="videoPlayerContainer">
-            <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
-            ${playerHtml}
-            ${controlsHtml}
-            ${progressHtml}
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
-            <div style="display:flex; gap:6px;">
-                <button id="prevVideoBtn" class="action-btn">⏪ Prev</button>
-                <button id="nextVideoBtn" class="action-btn">Next ⏩</button>
-            </div>
-            <div style="display:flex; gap:6px;">
-                <button id="shareBtn" class="action-btn">📤 Share</button>
-                ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
-                ${copyLinkHtml}
-            </div>
-        </div>
-        ${relatedHtml}
-    `;
-
+    
+    // عنوان اور بٹن اپ ڈیٹ کریں
+    title.textContent = video.title || 'Untitled';
+    shareBtn.style.display = 'inline-block';
+    copyLinkBtn.style.display = 'inline-block';
+    
+    // ڈاؤن لوڈ بٹن (اگر کاپی رائٹ فری ہو)
+    if (video.is_copyright_free) {
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = function() {
+            if (video.embed_code.trim().startsWith('<video')) {
+                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
+                if (srcMatch) window.open(srcMatch[1], '_blank');
+            } else {
+                const embedUrl = extractEmbedUrl(video.embed_code);
+                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                if (ytMatch) window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                else window.open(embedUrl, '_blank');
+            }
+        };
+    } else {
+        downloadBtn.style.display = 'none';
+    }
+    
+    // شیئر بٹن
+    shareBtn.onclick = function() {
+        const text = `Check out "${video.title}" on TrendyReels!`;
+        const url = window.location.href;
+        if (navigator.share) {
+            navigator.share({ title: 'TrendyReels', text: text, url: url }).catch(() => {});
+        } else {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        }
+    };
+    
+    // کاپی لنک بٹن
+    copyLinkBtn.onclick = function() {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href).then(() => alert('✅ Link copied!'));
+        } else {
+            const dummy = document.createElement('input');
+            dummy.value = window.location.href;
+            document.body.appendChild(dummy);
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            alert('✅ Link copied!');
+        }
+    };
+    
+    // کلوز بٹن (بیک بٹن بھی کام کرے گا)
     document.getElementById('closeModalBtn').onclick = function() {
         document.getElementById('videoModal').classList.remove('active');
-        document.getElementById('videoPlayer').innerHTML = '';
+        player.innerHTML = '';
+        window.history.back();
     };
-
-    const videoEl = player.querySelector('video');
-
-    if (videoEl) {
-        // ✅ NEW: Play/Pause Button
+    
+    // YouTube-style پلے/پاز کنٹرولز (صرف native video کے لیے)
+    const videoEl = player.querySelector('video') || player.querySelector('iframe');
+    if (videoEl && videoEl.tagName === 'VIDEO') {
         const playPauseBtn = document.getElementById('playPauseBtn');
         playPauseBtn.addEventListener('click', function() {
             if (videoEl.paused) {
@@ -241,290 +268,73 @@ function openModernVideoModal(video) {
                 this.textContent = '▶';
             }
         });
-
-        videoEl.addEventListener('play', () => {
-            playPauseBtn.textContent = '⏸';
-        });
-        videoEl.addEventListener('pause', () => {
-            playPauseBtn.textContent = '▶';
-        });
-
-        // ✅ Speed Control
+        videoEl.addEventListener('play', () => { playPauseBtn.textContent = '⏸'; });
+        videoEl.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
+        
         document.getElementById('speedControl').addEventListener('change', function() {
             videoEl.playbackRate = parseFloat(this.value);
         });
-
-        // ✅ Fullscreen
+        
         document.getElementById('fullscreenBtn').addEventListener('click', function() {
             const container = document.getElementById('videoPlayerContainer');
             if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {});
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(() => {});
-                }
+                container.requestFullscreen().catch(() => {});
             } else {
                 document.exitFullscreen();
-                if (screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
             }
         });
-
-        // ✅ Rotate Button
-        document.getElementById('rotateBtn').addEventListener('click', function() {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').then(() => {
-                    document.getElementById('rotateBtn').style.color = '#4CAF50';
-                    document.getElementById('rotateBtn').textContent = '🔓';
-                }).catch(() => {});
-            }
-        });
-
-        // ✅ Lock Button
-        document.getElementById('lockBtn').addEventListener('click', function() {
-            if (!document.fullscreenElement) {
-                const container = document.getElementById('videoPlayerContainer');
-                container.requestFullscreen().catch(() => {});
-            }
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').then(() => {
-                    document.getElementById('lockBtn').style.color = '#4CAF50';
-                    document.getElementById('lockBtn').textContent = '🔓';
-                }).catch(() => {});
-            }
-        });
-
-        // ✅ PiP Button
-        document.getElementById('pipBtn').addEventListener('click', function() {
-            if (videoEl) {
-                if (document.pictureInPictureElement) {
-                    document.exitPictureInPicture();
-                } else {
-                    videoEl.requestPictureInPicture().catch(() => {});
-                }
-            }
-        });
-
-        // ✅ Loop Button
-        document.getElementById('loopBtn').addEventListener('click', function() {
-            videoEl.loop = !videoEl.loop;
-            document.getElementById('loopBtn').style.color = videoEl.loop ? '#4CAF50' : 'white';
-        });
-
-        // ✅ Existing: Double-click forward/backward
-        videoEl.addEventListener('dblclick', function(e) {
-            const rect = this.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            if (x > rect.width / 2) {
-                this.currentTime += 10;
-            } else {
-                this.currentTime -= 10;
-            }
-        });
-
-        // ✅ NEW: Auto-Rotate on open (simulated click)
-        setTimeout(() => {
-            const fakeEvent = new MouseEvent('click', { bubbles: true });
-            document.getElementById('rotateBtn')?.dispatchEvent(fakeEvent);
-        }, 150);
-
-        // ✅ NEW: Progress Bar + Time Display logic
-        const progressContainer = document.getElementById('customProgressContainer');
-        const progressBar = document.getElementById('customProgressBar');
-        const currentTimeDisplay = document.getElementById('customCurrentTime');
-        const durationDisplay = document.getElementById('customDuration');
-
-        videoEl.addEventListener('loadedmetadata', () => {
-            durationDisplay.textContent = formatTime(videoEl.duration);
-        });
-
-        videoEl.addEventListener('timeupdate', () => {
-            if (!isNaN(videoEl.duration) && videoEl.duration > 0) {
-                const percent = (videoEl.currentTime / videoEl.duration) * 100;
-                progressBar.style.width = percent + '%';
-                currentTimeDisplay.textContent = formatTime(videoEl.currentTime);
-                durationDisplay.textContent = formatTime(videoEl.duration);
-            }
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            videoEl.currentTime = pos * videoEl.duration;
-        });
-
-        // ✅ NEW: Auto-hide controls
-        const controlsOverlay = document.getElementById('ytControlsOverlay');
-        const videoContainer = document.getElementById('videoPlayerContainer');
-        let hideTimer;
-
-        function showControls() {
-            controlsOverlay.style.opacity = '1';
-            progressContainer.style.opacity = '1';
-            clearTimeout(hideTimer);
-            if (!videoEl.paused) {
-                hideTimer = setTimeout(() => {
-                    controlsOverlay.style.opacity = '0';
-                    progressContainer.style.opacity = '0';
-                }, 3000);
+    }
+    
+    // ============================================
+    // SWIPE SUPPORT (Touch + Mouse)
+    // ============================================
+    
+    const container = document.getElementById('videoPlayerContainer');
+    
+    // Touch swipe
+    container.addEventListener('touchstart', function(e) {
+        touchStartY = e.touches[0].clientY;
+    });
+    
+    container.addEventListener('touchend', function(e) {
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(deltaY) > 50) {
+            if (deltaY < 0) {
+                loadReel(currentReelIndex + 1); // اگلی ویڈیو (سوائپ اپ)
+            } else if (deltaY > 0) {
+                loadReel(currentReelIndex - 1); // پچھلی ویڈیو (سوائپ ڈاؤن)
             }
         }
-
-        videoContainer.addEventListener('click', showControls);
-        videoContainer.addEventListener('touchstart', showControls);
-        videoEl.addEventListener('play', showControls);
-        videoEl.addEventListener('pause', () => {
-            controlsOverlay.style.opacity = '1';
-            progressContainer.style.opacity = '1';
-            clearTimeout(hideTimer);
-        });
-    }
-
-    document.getElementById('prevVideoBtn').addEventListener('click', () => {
-        const prev = getAdjacentVideo('prev');
-        if (prev) openModernVideoModal(prev);
-        else alert('No previous video.');
     });
-
-    document.getElementById('nextVideoBtn').addEventListener('click', () => {
-        const next = getAdjacentVideo('next');
-        if (next) openModernVideoModal(next);
-        else alert('No next video.');
+    
+    // Mouse drag (Desktop)
+    let mouseStartY = 0;
+    let isMouseDown = false;
+    container.addEventListener('mousedown', function(e) {
+        mouseStartY = e.clientY;
+        isMouseDown = true;
     });
-
-    // ✅ NEW: Native Share + Copy Link
-    document.getElementById('shareBtn').addEventListener('click', () => {
-        const text = `Check out "${video.title}" on TrendyReels!`;
-        const url = window.location.href;
-        if (nativeShare(text, url)) return;
-        // Fallback to old prompt
-        const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
-        if (shareMenu === '1') {
-            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-        } else if (shareMenu === '2') {
-            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
-        } else if (shareMenu === '3') {
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-        } else if (shareMenu === '4') {
-            navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
+    document.addEventListener('mousemove', function(e) {
+        if (!isMouseDown) return;
+        const deltaY = e.clientY - mouseStartY;
+        if (Math.abs(deltaY) > 50) {
+            if (deltaY < 0) {
+                loadReel(currentReelIndex + 1);
+            } else {
+                loadReel(currentReelIndex - 1);
+            }
+            isMouseDown = false;
         }
     });
-
-    document.getElementById('copyLinkBtn').addEventListener('click', () => {
-        copyVideoLink(window.location.href);
+    document.addEventListener('mouseup', function() {
+        isMouseDown = false;
     });
-
-    if (video.is_copyright_free) {
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            if (video.embed_code.trim().startsWith('<video')) {
-                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
-                if (srcMatch) window.open(srcMatch[1], '_blank');
-            } else {
-                const embedUrl = extractEmbedUrl(video.embed_code);
-                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-                if (ytMatch) {
-                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
-                } else {
-                    window.open(embedUrl, '_blank');
-                }
-            }
-        });
-    }
-
-    title.textContent = video.title || 'Untitled Video';
-    state.currentVideo = video;
-}
-
-// ============================================
-// INITIALIZE AUTO-COMPLETE + HISTORY ON PAGE LOAD
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    initAutoComplete();
-    renderHistory();
-});
-// ============================================
-// REELS / SHORTS VIEWER (ALL VIDEOS AS REELS)
-// ============================================
-
-let reelsQueue = [];
-let currentReelIndex = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let isSwiping = false;
-
-// Open Reels Modal
-document.getElementById('reelsToggleBtn').addEventListener('click', function() {
-    // ساری ویڈیوز کو ریلز کی قطار میں ڈال دیں
-    reelsQueue = state.videos.filter(v => v.embed_code && v.embed_code.trim() !== '');
-    if (reelsQueue.length === 0) {
-        alert('No videos available for Reels.');
-        return;
-    }
-    // ترتیب ویسے ہی رکھیں جیسے سائٹ پر ہے (یا چاہیں تو رینڈم کر سکتے ہیں)
-    currentReelIndex = 0;
-    document.getElementById('reelsModal').classList.add('active');
-    loadReel(0);
-});
-
-// Close Reels Modal
-document.getElementById('closeReelsBtn').addEventListener('click', function() {
-    document.getElementById('reelsModal').classList.remove('active');
-    document.getElementById('reelsPlayer').innerHTML = '';
-});
-
-// Load a specific reel
-function loadReel(index) {
-    if (reelsQueue.length === 0) return;
-    if (index < 0) index = reelsQueue.length - 1;
-    if (index >= reelsQueue.length) index = 0;
-    currentReelIndex = index;
     
-    const video = reelsQueue[index];
-    const player = document.getElementById('reelsPlayer');
-    const title = document.getElementById('reelsTitle');
-    const category = document.getElementById('reelsCategory');
+    // ============================================
+    // PRELOAD NEXT VIDEO (Optimization)
+    // ============================================
     
-    // پہلے پلیئر کو خالی کریں
-    player.innerHTML = '';
-    
-    // ✅ تیز لوڈنگ کے لیے تغییر: loading="eager" اور fetchpriority="high"
-    let embedHtml = '';
-    if (video.embed_code.trim().startsWith('<video')) {
-        embedHtml = video.embed_code;
-    } else {
-        const embedUrl = extractEmbedUrl(video.embed_code);
-        embedHtml = `<iframe src="${embedUrl}" allow="fullscreen" fetchpriority="high" loading="eager" frameborder="0" allowfullscreen></iframe>`;
-    }
-    player.innerHTML = embedHtml;
-    
-    // عنوان اور کیٹگری اپ ڈیٹ کریں
-    title.textContent = video.title || 'Untitled';
-    category.textContent = video.category || 'Uncategorized';
-    
-    const downloadBtn = document.getElementById('reelsDownloadBtn');
-    if (video.is_copyright_free) {
-        downloadBtn.style.display = 'flex';
-        downloadBtn.onclick = function() {
-            if (video.embed_code.trim().startsWith('<video')) {
-                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
-                if (srcMatch) window.open(srcMatch[1], '_blank');
-            } else {
-                const embedUrl = extractEmbedUrl(video.embed_code);
-                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
-                if (ytMatch) {
-                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
-                } else {
-                    window.open(embedUrl, '_blank');
-                }
-            }
-        };
-    } else {
-        downloadBtn.style.display = 'none';
-    }
-    
-    // ✅ نیا اضافہ: اگلی ویڈیو پہلے سے لوڈ کرنے کا طریقہ
-    function preloadNextVideo() {
+    setTimeout(() => {
         const nextIndex = currentReelIndex + 1;
         if (nextIndex < reelsQueue.length) {
             const nextVideo = reelsQueue[nextIndex];
@@ -535,144 +345,35 @@ function loadReel(index) {
                 nextEmbedHtml = nextVideo.embed_code;
             } else {
                 const nextEmbedUrl = extractEmbedUrl(nextVideo.embed_code);
-                nextEmbedHtml = `<iframe src="${nextEmbedUrl}" allow="fullscreen" fetchpriority="high" loading="eager" frameborder="0" allowfullscreen></iframe>`;
+                nextEmbedHtml = `<iframe src="${nextEmbedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
             }
             preloader.innerHTML = nextEmbedHtml;
             document.body.appendChild(preloader);
-            // میموری صاف رکھنے کے لیے 5 سیکنڈ بعد ہٹا دیں
             setTimeout(() => preloader.remove(), 5000);
         }
-    }
-    
-    // اگلی ویڈیو لوڈ کرنے کا عمل شروع کریں
-    preloadNextVideo();
+    }, 100);
 }
 
 // ============================================
-// SWIPE LOGIC (Up/Down)
+// BACK BUTTON CLOSE MODAL (Mobile)
 // ============================================
 
-const reelsContainer = document.getElementById('reelsContainer');
-
-reelsContainer.addEventListener('touchstart', function(e) {
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-    isSwiping = false;
-});
-
-reelsContainer.addEventListener('touchmove', function(e) {
-    const deltaY = e.touches[0].clientY - touchStartY;
-    if (Math.abs(deltaY) > 20) {
-        isSwiping = true;
-    }
-});
-
-reelsContainer.addEventListener('touchend', function(e) {
-    if (!isSwiping) return;
-    const deltaY = e.changedTouches[0].clientY - touchStartY;
-    const deltaTime = Date.now() - touchStartTime;
-    
-    if (Math.abs(deltaY) > 50 || deltaTime < 300) {
-        if (deltaY < 0) {
-            loadReel(currentReelIndex + 1);
-        } else if (deltaY > 0) {
-            loadReel(currentReelIndex - 1);
-        }
-    }
-    isSwiping = false;
-});
-
-// Mouse drag support for desktop
-let mouseStartY = 0;
-let isMouseDown = false;
-
-reelsContainer.addEventListener('mousedown', function(e) {
-    mouseStartY = e.clientY;
-    isMouseDown = true;
-});
-
-document.addEventListener('mousemove', function(e) {
-    if (!isMouseDown) return;
-    const deltaY = e.clientY - mouseStartY;
-    if (Math.abs(deltaY) > 50) {
-        if (deltaY < 0) {
-            loadReel(currentReelIndex + 1);
-        } else {
-            loadReel(currentReelIndex - 1);
-        }
-        isMouseDown = false;
-    }
-});
-
-document.addEventListener('mouseup', function() {
-    isMouseDown = false;
-});
-
-// ============================================
-// REELS ACTION BUTTONS (Like, Comment, Share)
-// ============================================
-
-document.getElementById('reelsLikeBtn').addEventListener('click', function() {
-    const currentVideo = reelsQueue[currentReelIndex];
-    if (!currentVideo) return;
-    const likedVideos = JSON.parse(localStorage.getItem('trendyreels_liked') || '[]');
-    const index = likedVideos.indexOf(currentVideo.id);
-    if (index === -1) {
-        likedVideos.push(currentVideo.id);
-        this.style.color = '#FF0000';
-        this.textContent = '❤️';
-    } else {
-        likedVideos.splice(index, 1);
-        this.style.color = 'white';
-        this.textContent = '👍';
-    }
-    localStorage.setItem('trendyreels_liked', JSON.stringify(likedVideos));
-});
-
-document.getElementById('reelsCommentBtn').addEventListener('click', function() {
-    const comment = prompt('Write a comment:');
-    if (comment && comment.trim() !== '') {
-        alert('✅ Comment posted: "' + comment.trim() + '"');
-    }
-});
-
-document.getElementById('reelsShareBtn').addEventListener('click', function() {
-    const video = reelsQueue[currentReelIndex];
-    if (!video) return;
-    const text = `Check out "${video.title}" on TrendyReels!`;
-    const url = window.location.href;
-    
-    if (navigator.share) {
-        navigator.share({ title: 'TrendyReels', text: text, url: url }).catch(() => {});
-    } else {
-        const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
-        if (shareMenu === '1') {
-            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
-        } else if (shareMenu === '2') {
-            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
-        } else if (shareMenu === '3') {
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-        } else if (shareMenu === '4') {
-            navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
+document.addEventListener('popstate', function(e) {
+    const modal = document.getElementById('videoModal');
+    if (modal.classList.contains('active')) {
+        modal.classList.remove('active');
+        document.getElementById('videoPlayer').innerHTML = '';
+        if (!e.state) {
+            window.history.pushState(null, '', window.location.href);
         }
     }
 });
 
 // ============================================
-// AUTO-PLAY on load
+// INITIALIZE AUTO-COMPLETE + HISTORY ON PAGE LOAD
 // ============================================
 
-const origLoadReel = loadReel;
-loadReel = function(index) {
-    origLoadReel(index);
-    setTimeout(() => {
-        const iframe = document.querySelector('#reelsPlayer iframe');
-        const video = document.querySelector('#reelsPlayer video');
-        if (iframe) {
-            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-        }
-        if (video) {
-            video.play().catch(() => {});
-        }
-    }, 500);
-};
+document.addEventListener('DOMContentLoaded', function() {
+    initAutoComplete();
+    renderHistory();
+});
