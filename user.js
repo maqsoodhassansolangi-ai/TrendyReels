@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL PHASE 1 (Rotate + Lock Buttons)
+// USER.JS - FINAL PHASE 1 (Rotate + Lock Buttons + Complete YouTube-style Controls)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -10,6 +10,13 @@ function getAdjacentVideo(direction) {
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     if (newIndex < 0 || newIndex >= state.videos.length) return null;
     return state.videos[newIndex];
+}
+
+function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
 }
 
 function openModernVideoModal(video) {
@@ -48,26 +55,40 @@ function openModernVideoModal(video) {
         `;
     }
 
-    // ✅ YouTube-style Controls (Transparent + Rotate + Lock)
+    // ✅ COMPLETE YouTube-style Controls (Play/Pause + All others) - FULLY TRANSPARENT
     const controlsHtml = `
         <div class="yt-controls-overlay" id="ytControlsOverlay">
-            <div style="display:flex; gap:12px; align-items:center;">
-                <select id="speedControl" style="background:transparent; color:white; border:1px solid #888; border-radius:4px; padding:2px 6px; font-size:12px; outline:none;">
-                    <option value="0.5">0.5x</option>
-                    <option value="0.75">0.75x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="1.25">1.25x</option>
-                    <option value="1.5">1.5x</option>
-                    <option value="2">2x</option>
-                </select>
+            <div style="display:flex; gap:12px; align-items:center; width:100%; justify-content:space-between;">
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button class="yt-btn" id="playPauseBtn" style="background:transparent; border:none; color:white; font-size:22px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">▶</button>
+                    <select id="speedControl" style="background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:2px 6px; font-size:12px; outline:none; cursor:pointer;">
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2x</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button class="yt-btn" id="rotateBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔄</button>
+                    <button class="yt-btn" id="lockBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔒</button>
+                    <button class="yt-btn" id="fullscreenBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">⛶</button>
+                    <button class="yt-btn" id="pipBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🖼️</button>
+                    <button class="yt-btn" id="loopBtn" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; opacity:0.9; transition:opacity 0.2s;">🔁</button>
+                </div>
             </div>
-            <div style="display:flex; gap:12px; align-items:center;">
-                <button class="yt-btn" id="rotateBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔄</button>
-                <button class="yt-btn" id="lockBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔒</button>
-                <button class="yt-btn" id="fullscreenBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">⛶</button>
-                <button class="yt-btn" id="pipBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🖼️</button>
-                <button class="yt-btn" id="loopBtn" style="background:none; border:none; color:white; font-size:18px; cursor:pointer; padding:0; line-height:1;">🔁</button>
-            </div>
+        </div>
+    `;
+
+    // ✅ NEW: Progress Bar + Time Display
+    const progressHtml = `
+        <div class="custom-progress-container" id="customProgressContainer">
+            <div class="custom-progress-bar" id="customProgressBar"></div>
+        </div>
+        <div class="custom-time-display">
+            <span id="customCurrentTime">0:00</span>
+            <span id="customDuration">0:00</span>
         </div>
     `;
 
@@ -76,6 +97,7 @@ function openModernVideoModal(video) {
             <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
             ${playerHtml}
             ${controlsHtml}
+            ${progressHtml}
         </div>
         <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap:wrap; gap:6px;">
             <div style="display:flex; gap:6px;">
@@ -95,73 +117,91 @@ function openModernVideoModal(video) {
         document.getElementById('videoPlayer').innerHTML = '';
     };
 
-    document.getElementById('speedControl').addEventListener('change', function() {
-        const video = player.querySelector('video');
-        if (video) video.playbackRate = parseFloat(this.value);
-    });
-
-    // ✅ Fullscreen (with Auto-Rotate attempt)
-    document.getElementById('fullscreenBtn').addEventListener('click', function() {
-        const container = document.getElementById('videoPlayerContainer');
-        if (!document.fullscreenElement) {
-            container.requestFullscreen().catch(err => {});
-            // براؤزر روٹیٹ کی کوشش کریں
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(() => {});
-            }
-        } else {
-            document.exitFullscreen();
-            if (screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock();
-            }
-        }
-    });
-
-    // ✅ Rotate Button (Manual rotate with lock)
-    document.getElementById('rotateBtn').addEventListener('click', function() {
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').then(() => {
-                document.getElementById('rotateBtn').style.color = '#4CAF50';
-                document.getElementById('rotateBtn').textContent = '🔓';
-            }).catch(() => {});
-        }
-    });
-
-    // ✅ Lock Button (Toggle lock)
-    document.getElementById('lockBtn').addEventListener('click', function() {
-        if (!document.fullscreenElement) {
-            const container = document.getElementById('videoPlayerContainer');
-            container.requestFullscreen().catch(() => {});
-        }
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').then(() => {
-                document.getElementById('lockBtn').style.color = '#4CAF50';
-                document.getElementById('lockBtn').textContent = '🔓';
-            }).catch(() => {});
-        }
-    });
-
-    document.getElementById('pipBtn').addEventListener('click', function() {
-        const video = player.querySelector('video');
-        if (video) {
-            if (document.pictureInPictureElement) {
-                document.exitPictureInPicture();
-            } else {
-                video.requestPictureInPicture().catch(() => {});
-            }
-        }
-    });
-
-    document.getElementById('loopBtn').addEventListener('click', function() {
-        const video = player.querySelector('video');
-        if (video) {
-            video.loop = !video.loop;
-            document.getElementById('loopBtn').style.color = video.loop ? '#4CAF50' : 'white';
-        }
-    });
-
     const videoEl = player.querySelector('video');
+
     if (videoEl) {
+        // ✅ NEW: Play/Pause Button
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        playPauseBtn.addEventListener('click', function() {
+            if (videoEl.paused) {
+                videoEl.play();
+                this.textContent = '⏸';
+            } else {
+                videoEl.pause();
+                this.textContent = '▶';
+            }
+        });
+
+        videoEl.addEventListener('play', () => {
+            playPauseBtn.textContent = '⏸';
+        });
+        videoEl.addEventListener('pause', () => {
+            playPauseBtn.textContent = '▶';
+        });
+
+        // ✅ Speed Control
+        document.getElementById('speedControl').addEventListener('change', function() {
+            videoEl.playbackRate = parseFloat(this.value);
+        });
+
+        // ✅ Fullscreen
+        document.getElementById('fullscreenBtn').addEventListener('click', function() {
+            const container = document.getElementById('videoPlayerContainer');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {});
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+            } else {
+                document.exitFullscreen();
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+            }
+        });
+
+        // ✅ Rotate Button
+        document.getElementById('rotateBtn').addEventListener('click', function() {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').then(() => {
+                    document.getElementById('rotateBtn').style.color = '#4CAF50';
+                    document.getElementById('rotateBtn').textContent = '🔓';
+                }).catch(() => {});
+            }
+        });
+
+        // ✅ Lock Button
+        document.getElementById('lockBtn').addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                const container = document.getElementById('videoPlayerContainer');
+                container.requestFullscreen().catch(() => {});
+            }
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').then(() => {
+                    document.getElementById('lockBtn').style.color = '#4CAF50';
+                    document.getElementById('lockBtn').textContent = '🔓';
+                }).catch(() => {});
+            }
+        });
+
+        // ✅ PiP Button
+        document.getElementById('pipBtn').addEventListener('click', function() {
+            if (videoEl) {
+                if (document.pictureInPictureElement) {
+                    document.exitPictureInPicture();
+                } else {
+                    videoEl.requestPictureInPicture().catch(() => {});
+                }
+            }
+        });
+
+        // ✅ Loop Button
+        document.getElementById('loopBtn').addEventListener('click', function() {
+            videoEl.loop = !videoEl.loop;
+            document.getElementById('loopBtn').style.color = videoEl.loop ? '#4CAF50' : 'white';
+        });
+
+        // ✅ Existing: Double-click forward/backward
         videoEl.addEventListener('dblclick', function(e) {
             const rect = this.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -170,6 +210,63 @@ function openModernVideoModal(video) {
             } else {
                 this.currentTime -= 10;
             }
+        });
+
+        // ✅ NEW: Auto-Rotate on open (simulated click)
+        setTimeout(() => {
+            const fakeEvent = new MouseEvent('click', { bubbles: true });
+            document.getElementById('rotateBtn')?.dispatchEvent(fakeEvent);
+        }, 150);
+
+        // ✅ NEW: Progress Bar + Time Display logic
+        const progressContainer = document.getElementById('customProgressContainer');
+        const progressBar = document.getElementById('customProgressBar');
+        const currentTimeDisplay = document.getElementById('customCurrentTime');
+        const durationDisplay = document.getElementById('customDuration');
+
+        videoEl.addEventListener('loadedmetadata', () => {
+            durationDisplay.textContent = formatTime(videoEl.duration);
+        });
+
+        videoEl.addEventListener('timeupdate', () => {
+            if (!isNaN(videoEl.duration) && videoEl.duration > 0) {
+                const percent = (videoEl.currentTime / videoEl.duration) * 100;
+                progressBar.style.width = percent + '%';
+                currentTimeDisplay.textContent = formatTime(videoEl.currentTime);
+                durationDisplay.textContent = formatTime(videoEl.duration);
+            }
+        });
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            videoEl.currentTime = pos * videoEl.duration;
+        });
+
+        // ✅ NEW: Auto-hide controls
+        const controlsOverlay = document.getElementById('ytControlsOverlay');
+        const videoContainer = document.getElementById('videoPlayerContainer');
+        let hideTimer;
+
+        function showControls() {
+            controlsOverlay.style.opacity = '1';
+            progressContainer.style.opacity = '1';
+            clearTimeout(hideTimer);
+            if (!videoEl.paused) {
+                hideTimer = setTimeout(() => {
+                    controlsOverlay.style.opacity = '0';
+                    progressContainer.style.opacity = '0';
+                }, 3000);
+            }
+        }
+
+        videoContainer.addEventListener('click', showControls);
+        videoContainer.addEventListener('touchstart', showControls);
+        videoEl.addEventListener('play', showControls);
+        videoEl.addEventListener('pause', () => {
+            controlsOverlay.style.opacity = '1';
+            progressContainer.style.opacity = '1';
+            clearTimeout(hideTimer);
         });
     }
 
@@ -219,4 +316,4 @@ function openModernVideoModal(video) {
 
     title.textContent = video.title || 'Untitled Video';
     state.currentVideo = video;
-}
+                                       }
