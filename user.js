@@ -485,17 +485,20 @@ function loadReel(index) {
     const title = document.getElementById('reelsTitle');
     const category = document.getElementById('reelsCategory');
     
+    // پہلے پلیئر کو خالی کریں
     player.innerHTML = '';
     
+    // ✅ تیز لوڈنگ کے لیے تغییر: loading="eager" اور fetchpriority="high"
     let embedHtml = '';
     if (video.embed_code.trim().startsWith('<video')) {
         embedHtml = video.embed_code;
     } else {
         const embedUrl = extractEmbedUrl(video.embed_code);
-        embedHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+        embedHtml = `<iframe src="${embedUrl}" allow="fullscreen" fetchpriority="high" loading="eager" frameborder="0" allowfullscreen></iframe>`;
     }
     player.innerHTML = embedHtml;
     
+    // عنوان اور کیٹگری اپ ڈیٹ کریں
     title.textContent = video.title || 'Untitled';
     category.textContent = video.category || 'Uncategorized';
     
@@ -519,6 +522,30 @@ function loadReel(index) {
     } else {
         downloadBtn.style.display = 'none';
     }
+    
+    // ✅ نیا اضافہ: اگلی ویڈیو پہلے سے لوڈ کرنے کا طریقہ
+    function preloadNextVideo() {
+        const nextIndex = currentReelIndex + 1;
+        if (nextIndex < reelsQueue.length) {
+            const nextVideo = reelsQueue[nextIndex];
+            const preloader = document.createElement('div');
+            preloader.style.display = 'none';
+            let nextEmbedHtml = '';
+            if (nextVideo.embed_code.trim().startsWith('<video')) {
+                nextEmbedHtml = nextVideo.embed_code;
+            } else {
+                const nextEmbedUrl = extractEmbedUrl(nextVideo.embed_code);
+                nextEmbedHtml = `<iframe src="${nextEmbedUrl}" allow="fullscreen" fetchpriority="high" loading="eager" frameborder="0" allowfullscreen></iframe>`;
+            }
+            preloader.innerHTML = nextEmbedHtml;
+            document.body.appendChild(preloader);
+            // میموری صاف رکھنے کے لیے 5 سیکنڈ بعد ہٹا دیں
+            setTimeout(() => preloader.remove(), 5000);
+        }
+    }
+    
+    // اگلی ویڈیو لوڈ کرنے کا عمل شروع کریں
+    preloadNextVideo();
 }
 
 // ============================================
