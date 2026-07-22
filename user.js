@@ -443,6 +443,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initAutoComplete();
     renderHistory();
 });
+
+// PART 1 ENDS HERE — COPY PART 2 BELOW THIS LINE
 // ============================================
 // REELS / SHORTS VIEWER (ALL VIDEOS AS REELS)
 // ============================================
@@ -549,25 +551,28 @@ function loadReel(index) {
 }
 
 // ============================================
-// SWIPE LOGIC (Up/Down)
+// ✅ FIX 1: SWIPE ON FULL SCREEN (document پر لگائیں)
 // ============================================
 
-const reelsContainer = document.getElementById('reelsContainer');
-
-reelsContainer.addEventListener('touchstart', function(e) {
+// پوری اسکرین پر سوائپ کے لیے document استعمال کریں
+document.addEventListener('touchstart', function(e) {
+    // صرف اس وقت کام کریں جب reelsModal کھلا ہو
+    if (!document.getElementById('reelsModal').classList.contains('active')) return;
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
     isSwiping = false;
 });
 
-reelsContainer.addEventListener('touchmove', function(e) {
+document.addEventListener('touchmove', function(e) {
+    if (!document.getElementById('reelsModal').classList.contains('active')) return;
     const deltaY = e.touches[0].clientY - touchStartY;
     if (Math.abs(deltaY) > 20) {
         isSwiping = true;
     }
 });
 
-reelsContainer.addEventListener('touchend', function(e) {
+document.addEventListener('touchend', function(e) {
+    if (!document.getElementById('reelsModal').classList.contains('active')) return;
     if (!isSwiping) return;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
     const deltaTime = Date.now() - touchStartTime;
@@ -586,13 +591,14 @@ reelsContainer.addEventListener('touchend', function(e) {
 let mouseStartY = 0;
 let isMouseDown = false;
 
-reelsContainer.addEventListener('mousedown', function(e) {
+document.addEventListener('mousedown', function(e) {
+    if (!document.getElementById('reelsModal').classList.contains('active')) return;
     mouseStartY = e.clientY;
     isMouseDown = true;
 });
 
 document.addEventListener('mousemove', function(e) {
-    if (!isMouseDown) return;
+    if (!isMouseDown || !document.getElementById('reelsModal').classList.contains('active')) return;
     const deltaY = e.clientY - mouseStartY;
     if (Math.abs(deltaY) > 50) {
         if (deltaY < 0) {
@@ -676,3 +682,42 @@ loadReel = function(index) {
         }
     }, 500);
 };
+
+// ============================================
+// ✅ FIX 2: BACK BUTTON (موڈل بند ہو، ویب سائٹ نہیں)
+// ============================================
+
+function pushModalState() {
+    const state = { modalOpen: true };
+    const url = window.location.href;
+    window.history.pushState(state, '', url);
+}
+
+// جب موڈل کھلے تو History میں اسٹیٹ شامل کریں
+const originalOpenModernVideoModal = openModernVideoModal;
+openModernVideoModal = function(video) {
+    originalOpenModernVideoModal(video);
+    pushModalState();
+};
+
+const originalOpenReels = document.getElementById('reelsToggleBtn').click;
+document.getElementById('reelsToggleBtn').addEventListener('click', function() {
+    // اصل میں پہلے سے ہی کھلتا ہے، اس میں pushModalState شامل کریں
+    setTimeout(pushModalState, 100);
+});
+
+// بیک بٹن دبانے پر موڈل بند کریں
+window.addEventListener('popstate', function(e) {
+    if (e.state && e.state.modalOpen) {
+        const videoModal = document.getElementById('videoModal');
+        const reelsModal = document.getElementById('reelsModal');
+        if (videoModal.classList.contains('active')) {
+            videoModal.classList.remove('active');
+            document.getElementById('videoPlayer').innerHTML = '';
+        }
+        if (reelsModal.classList.contains('active')) {
+            reelsModal.classList.remove('active');
+            document.getElementById('reelsPlayer').innerHTML = '';
+        }
+    }
+});
