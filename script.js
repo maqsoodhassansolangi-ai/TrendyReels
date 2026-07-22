@@ -598,24 +598,73 @@ function renderAdSlots() {
 }
 
 // --- Secret Admin ---
-const ADMIN_PASSWORD = 'admin123';
-let tapCount = 0;
-let tapTimer = null;
+// ✅ NEW: Long Press on Logo (5.5 seconds) + SHA-256 hashed password
+// Password: "bakhtawer787"
+const ADMIN_PASSWORD_HASH = '0b3a8f7c9e2d1b4a5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d';
+
+let longPressTimer = null;
+let isLongPressTriggered = false;
+
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function initSecretAdmin() {
-    const secretBtn = $('#secretAdminBtn');
-    if (!secretBtn) return;
-    secretBtn.addEventListener('click', () => {
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => { tapCount = 0; }, 1000);
-        if (tapCount === 5) {
+    const logo = document.querySelector('.logo');
+    if (!logo) return;
+
+    // Touch events (Mobile)
+    logo.addEventListener('touchstart', function(e) {
+        isLongPressTriggered = false;
+        longPressTimer = setTimeout(async () => {
+            isLongPressTriggered = true;
             const password = prompt('🔐 Enter Admin Password:');
-            if (password === ADMIN_PASSWORD) window.location.href = 'admin.html';
-            else { alert('❌ Wrong password!'); tapCount = 0; }
-        }
+            if (!password) return;
+            const hash = await hashPassword(password);
+            if (hash === ADMIN_PASSWORD_HASH) {
+                window.location.href = 'admin.html';
+            } else {
+                alert('❌ Wrong password!');
+            }
+        }, 5500); // 5.5 seconds
     });
-      }
+
+    logo.addEventListener('touchend', function(e) {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+
+    logo.addEventListener('touchmove', function(e) {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+
+    // Mouse events (Desktop)
+    logo.addEventListener('mousedown', function(e) {
+        isLongPressTriggered = false;
+        longPressTimer = setTimeout(async () => {
+            isLongPressTriggered = true;
+            const password = prompt('🔐 Enter Admin Password:');
+            if (!password) return;
+            const hash = await hashPassword(password);
+            if (hash === ADMIN_PASSWORD_HASH) {
+                window.location.href = 'admin.html';
+            } else {
+                alert('❌ Wrong password!');
+            }
+        }, 5500);
+    });
+
+    logo.addEventListener('mouseup', function(e) {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+
+    logo.addEventListener('mouseleave', function(e) {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+}
 
 // ============================================
 // TrendyReels - V3.4.1 (COMPLETE FINAL VERSION) - PART 3
