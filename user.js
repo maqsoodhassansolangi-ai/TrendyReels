@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL PHASE 1 (Rotate + Lock Buttons + Complete YouTube-style Controls)
+// USER.JS - FINAL PHASE 3 (Auto-Complete + Native Share + History + Copy Link)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -19,12 +19,116 @@ function formatTime(seconds) {
     return mins + ':' + (secs < 10 ? '0' : '') + secs;
 }
 
+// ============================================
+// NEW: WATCH HISTORY (localStorage)
+// ============================================
+
+function addToHistory(video) {
+    let history = JSON.parse(localStorage.getItem('trendyreels_history') || '[]');
+    history = history.filter(v => v.id !== video.id);
+    history.unshift({ id: video.id, title: video.title, embed_code: video.embed_code, thumbnail: getThumbnail(video.embed_code) });
+    if (history.length > 5) history = history.slice(0, 5);
+    localStorage.setItem('trendyreels_history', JSON.stringify(history));
+    renderHistory();
+}
+
+function renderHistory() {
+    const section = document.getElementById('historySection');
+    const grid = document.getElementById('historyGrid');
+    if (!section || !grid) return;
+    const history = JSON.parse(localStorage.getItem('trendyreels_history') || '[]');
+    if (history.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+    grid.innerHTML = history.map(v => `
+        <div class="history-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id}))">
+            <img class="history-thumb" src="${v.thumbnail || 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'90\'><rect fill=\'%23ccc\'/></svg>'}" alt="${v.title}">
+            <div class="history-title">${v.title || 'Untitled'}</div>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// NEW: AUTO-COMPLETE SEARCH
+// ============================================
+
+function initAutoComplete() {
+    const searchInput = document.getElementById('searchInput');
+    const suggestions = document.getElementById('searchSuggestions');
+    if (!searchInput || !suggestions) return;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        if (query.length < 3) {
+            suggestions.style.display = 'none';
+            return;
+        }
+        const matches = state.videos.filter(v => v.title.toLowerCase().includes(query)).slice(0, 6);
+        if (matches.length === 0) {
+            suggestions.style.display = 'none';
+            return;
+        }
+        suggestions.innerHTML = matches.map(v => `
+            <div class="search-suggestion-item" onclick="openModernVideoModal(state.videos.find(x => x.id === ${v.id})); document.getElementById('searchSuggestions').style.display='none'">
+                ${v.title}
+            </div>
+        `).join('');
+        suggestions.style.display = 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+        }
+    });
+}
+
+// ============================================
+// NEW: NATIVE SHARE (Mobile browser share menu)
+// ============================================
+
+function nativeShare(text, url) {
+    if (navigator.share) {
+        navigator.share({ title: 'TrendyReels', text: text, url: url }).catch(() => {});
+        return true;
+    }
+    return false;
+}
+
+// ============================================
+// NEW: COPY LINK
+// ============================================
+
+function copyVideoLink(url) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => alert('✅ Link copied!')).catch(() => alert('❌ Failed to copy.'));
+    } else {
+        // Fallback
+        const dummy = document.createElement('input');
+        dummy.value = url;
+        document.body.appendChild(dummy);
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        alert('✅ Link copied!');
+    }
+}
+
+// ============================================
+// OPEN MODERN VIDEO MODAL (with all new features)
+// ============================================
+
 function openModernVideoModal(video) {
     const modal = document.getElementById('videoModal');
     modal.classList.add('active');
 
     const player = document.getElementById('videoPlayer');
     const title = document.getElementById('modalVideoTitle');
+
+    // ✅ Add to history
+    addToHistory(video);
 
     const related = state.videos
         .filter(v => v.id !== video.id && v.category === video.category)
@@ -92,6 +196,11 @@ function openModernVideoModal(video) {
         </div>
     `;
 
+    // ✅ NEW: Copy Link button
+    const copyLinkHtml = `
+        <button id="copyLinkBtn" class="action-btn" style="background:transparent; border:1px solid #666; color:white;">🔗 Copy Link</button>
+    `;
+
     player.innerHTML = `
         <div class="video-player-container" id="videoPlayerContainer">
             <button id="closeModalBtn" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; color:white; font-size:28px; border-radius:50%; width:44px; height:44px; cursor:pointer; z-index:40; line-height:44px; text-align:center;">&times;</button>
@@ -107,6 +216,7 @@ function openModernVideoModal(video) {
             <div style="display:flex; gap:6px;">
                 <button id="shareBtn" class="action-btn">📤 Share</button>
                 ${video.is_copyright_free ? `<button id="downloadBtn" class="action-btn">⬇ Download</button>` : ''}
+                ${copyLinkHtml}
             </div>
         </div>
         ${relatedHtml}
@@ -282,9 +392,12 @@ function openModernVideoModal(video) {
         else alert('No next video.');
     });
 
+    // ✅ NEW: Native Share + Copy Link
     document.getElementById('shareBtn').addEventListener('click', () => {
         const text = `Check out "${video.title}" on TrendyReels!`;
         const url = window.location.href;
+        if (nativeShare(text, url)) return;
+        // Fallback to old prompt
         const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
         if (shareMenu === '1') {
             window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
@@ -295,6 +408,10 @@ function openModernVideoModal(video) {
         } else if (shareMenu === '4') {
             navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
         }
+    });
+
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        copyVideoLink(window.location.href);
     });
 
     if (video.is_copyright_free) {
@@ -316,4 +433,13 @@ function openModernVideoModal(video) {
 
     title.textContent = video.title || 'Untitled Video';
     state.currentVideo = video;
-                                       }
+}
+
+// ============================================
+// INITIALIZE AUTO-COMPLETE + HISTORY ON PAGE LOAD
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    initAutoComplete();
+    renderHistory();
+});
