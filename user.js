@@ -443,3 +443,209 @@ document.addEventListener('DOMContentLoaded', function() {
     initAutoComplete();
     renderHistory();
 });
+// ============================================
+// REELS / SHORTS VIEWER (ALL VIDEOS AS REELS)
+// ============================================
+
+let reelsQueue = [];
+let currentReelIndex = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let isSwiping = false;
+
+// Open Reels Modal
+document.getElementById('reelsToggleBtn').addEventListener('click', function() {
+    // ساری ویڈیوز کو ریلز کی قطار میں ڈال دیں
+    reelsQueue = state.videos.filter(v => v.embed_code && v.embed_code.trim() !== '');
+    if (reelsQueue.length === 0) {
+        alert('No videos available for Reels.');
+        return;
+    }
+    // ترتیب ویسے ہی رکھیں جیسے سائٹ پر ہے (یا چاہیں تو رینڈم کر سکتے ہیں)
+    currentReelIndex = 0;
+    document.getElementById('reelsModal').classList.add('active');
+    loadReel(0);
+});
+
+// Close Reels Modal
+document.getElementById('closeReelsBtn').addEventListener('click', function() {
+    document.getElementById('reelsModal').classList.remove('active');
+    document.getElementById('reelsPlayer').innerHTML = '';
+});
+
+// Load a specific reel
+function loadReel(index) {
+    if (reelsQueue.length === 0) return;
+    if (index < 0) index = reelsQueue.length - 1;
+    if (index >= reelsQueue.length) index = 0;
+    currentReelIndex = index;
+    
+    const video = reelsQueue[index];
+    const player = document.getElementById('reelsPlayer');
+    const title = document.getElementById('reelsTitle');
+    const category = document.getElementById('reelsCategory');
+    
+    player.innerHTML = '';
+    
+    let embedHtml = '';
+    if (video.embed_code.trim().startsWith('<video')) {
+        embedHtml = video.embed_code;
+    } else {
+        const embedUrl = extractEmbedUrl(video.embed_code);
+        embedHtml = `<iframe src="${embedUrl}" allow="fullscreen" loading="lazy" frameborder="0" allowfullscreen></iframe>`;
+    }
+    player.innerHTML = embedHtml;
+    
+    title.textContent = video.title || 'Untitled';
+    category.textContent = video.category || 'Uncategorized';
+    
+    const downloadBtn = document.getElementById('reelsDownloadBtn');
+    if (video.is_copyright_free) {
+        downloadBtn.style.display = 'flex';
+        downloadBtn.onclick = function() {
+            if (video.embed_code.trim().startsWith('<video')) {
+                const srcMatch = video.embed_code.match(/src="([^"]+)"/);
+                if (srcMatch) window.open(srcMatch[1], '_blank');
+            } else {
+                const embedUrl = extractEmbedUrl(video.embed_code);
+                const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                if (ytMatch) {
+                    window.open(`https://www.youtube.com/watch?v=${ytMatch[1]}`, '_blank');
+                } else {
+                    window.open(embedUrl, '_blank');
+                }
+            }
+        };
+    } else {
+        downloadBtn.style.display = 'none';
+    }
+}
+
+// ============================================
+// SWIPE LOGIC (Up/Down)
+// ============================================
+
+const reelsContainer = document.getElementById('reelsContainer');
+
+reelsContainer.addEventListener('touchstart', function(e) {
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+    isSwiping = false;
+});
+
+reelsContainer.addEventListener('touchmove', function(e) {
+    const deltaY = e.touches[0].clientY - touchStartY;
+    if (Math.abs(deltaY) > 20) {
+        isSwiping = true;
+    }
+});
+
+reelsContainer.addEventListener('touchend', function(e) {
+    if (!isSwiping) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    const deltaTime = Date.now() - touchStartTime;
+    
+    if (Math.abs(deltaY) > 50 || deltaTime < 300) {
+        if (deltaY < 0) {
+            loadReel(currentReelIndex + 1);
+        } else if (deltaY > 0) {
+            loadReel(currentReelIndex - 1);
+        }
+    }
+    isSwiping = false;
+});
+
+// Mouse drag support for desktop
+let mouseStartY = 0;
+let isMouseDown = false;
+
+reelsContainer.addEventListener('mousedown', function(e) {
+    mouseStartY = e.clientY;
+    isMouseDown = true;
+});
+
+document.addEventListener('mousemove', function(e) {
+    if (!isMouseDown) return;
+    const deltaY = e.clientY - mouseStartY;
+    if (Math.abs(deltaY) > 50) {
+        if (deltaY < 0) {
+            loadReel(currentReelIndex + 1);
+        } else {
+            loadReel(currentReelIndex - 1);
+        }
+        isMouseDown = false;
+    }
+});
+
+document.addEventListener('mouseup', function() {
+    isMouseDown = false;
+});
+
+// ============================================
+// REELS ACTION BUTTONS (Like, Comment, Share)
+// ============================================
+
+document.getElementById('reelsLikeBtn').addEventListener('click', function() {
+    const currentVideo = reelsQueue[currentReelIndex];
+    if (!currentVideo) return;
+    const likedVideos = JSON.parse(localStorage.getItem('trendyreels_liked') || '[]');
+    const index = likedVideos.indexOf(currentVideo.id);
+    if (index === -1) {
+        likedVideos.push(currentVideo.id);
+        this.style.color = '#FF0000';
+        this.textContent = '❤️';
+    } else {
+        likedVideos.splice(index, 1);
+        this.style.color = 'white';
+        this.textContent = '👍';
+    }
+    localStorage.setItem('trendyreels_liked', JSON.stringify(likedVideos));
+});
+
+document.getElementById('reelsCommentBtn').addEventListener('click', function() {
+    const comment = prompt('Write a comment:');
+    if (comment && comment.trim() !== '') {
+        alert('✅ Comment posted: "' + comment.trim() + '"');
+    }
+});
+
+document.getElementById('reelsShareBtn').addEventListener('click', function() {
+    const video = reelsQueue[currentReelIndex];
+    if (!video) return;
+    const text = `Check out "${video.title}" on TrendyReels!`;
+    const url = window.location.href;
+    
+    if (navigator.share) {
+        navigator.share({ title: 'TrendyReels', text: text, url: url }).catch(() => {});
+    } else {
+        const shareMenu = prompt(`Share via:\n1. WhatsApp\n2. Facebook\n3. Twitter (X)\n4. Copy Link`, '1');
+        if (shareMenu === '1') {
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
+        } else if (shareMenu === '2') {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank');
+        } else if (shareMenu === '3') {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        } else if (shareMenu === '4') {
+            navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert('Failed to copy link.'));
+        }
+    }
+});
+
+// ============================================
+// AUTO-PLAY on load
+// ============================================
+
+const origLoadReel = loadReel;
+loadReel = function(index) {
+    origLoadReel(index);
+    setTimeout(() => {
+        const iframe = document.querySelector('#reelsPlayer iframe');
+        const video = document.querySelector('#reelsPlayer video');
+        if (iframe) {
+            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+        }
+        if (video) {
+            video.play().catch(() => {});
+        }
+    }, 500);
+};
