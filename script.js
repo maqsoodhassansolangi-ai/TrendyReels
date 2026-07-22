@@ -179,12 +179,12 @@ function renderVideos() {
         return `<div class="video-card" data-id="${video.id}">${mediaHtml}<div class="video-info"><div class="video-title">${video.title || 'Untitled Video'}</div><div class="video-meta"><span class="video-category">${video.category || 'Uncategorized'}</span>${video.is_copyright_free ? '<span class="copyright-badge">© Free</span>' : ''}</div></div></div>`;
     }).join('');
     grid.querySelectorAll('.video-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const id = parseInt(card.dataset.id);
-            const video = state.videos.find(v => v.id === id);
-            if (video) openVideoModal(video);
-        });
+    card.addEventListener('click', () => {
+        const id = parseInt(card.dataset.id);
+        const video = state.videos.find(v => v.id === id);
+        if (video) openModernVideoModal(video, true);
     });
+});
 }
 
 function getThumbnail(embedCode) {
