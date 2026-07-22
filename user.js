@@ -1,5 +1,5 @@
 // ============================================
-// USER.JS - FINAL PHASE 3 (Auto-Complete + Native Share + History + Copy Link)
+// USER.JS - FINAL PHASE 4 (Reels on Click + No Button Needed)
 // ============================================
 
 function getAdjacentVideo(direction) {
@@ -444,9 +444,8 @@ document.addEventListener('DOMContentLoaded', function() {
     renderHistory();
 });
 
-// PART 1 ENDS HERE — COPY PART 2 BELOW THIS LINE
 // ============================================
-// REELS / SHORTS VIEWER (ALL VIDEOS AS REELS)
+// REELS / SHORTS VIEWER (ALL VIDEOS AS REELS) - NO BUTTON NEEDED
 // ============================================
 
 let reelsQueue = [];
@@ -455,19 +454,25 @@ let touchStartY = 0;
 let touchStartTime = 0;
 let isSwiping = false;
 
-// Open Reels Modal
-document.getElementById('reelsToggleBtn').addEventListener('click', function() {
+// یہ فنکشن اب ہر ویڈیو کارڈ کے کلک سے براہ راست کال ہوگا
+function openReelsFromVideo(video) {
     // ساری ویڈیوز کو ریلز کی قطار میں ڈال دیں
     reelsQueue = state.videos.filter(v => v.embed_code && v.embed_code.trim() !== '');
     if (reelsQueue.length === 0) {
         alert('No videos available for Reels.');
         return;
     }
-    // ترتیب ویسے ہی رکھیں جیسے سائٹ پر ہے (یا چاہیں تو رینڈم کر سکتے ہیں)
+    // جس ویڈیو پر کلک کیا، اسے پہلے نمبر پر رکھیں
+    const index = reelsQueue.findIndex(v => v.id === video.id);
+    if (index !== -1) {
+        // اسے پہلے نمبر پر منتقل کریں
+        const [selectedVideo] = reelsQueue.splice(index, 1);
+        reelsQueue.unshift(selectedVideo);
+    }
     currentReelIndex = 0;
     document.getElementById('reelsModal').classList.add('active');
     loadReel(0);
-});
+}
 
 // Close Reels Modal
 document.getElementById('closeReelsBtn').addEventListener('click', function() {
@@ -700,10 +705,20 @@ openModernVideoModal = function(video) {
     pushModalState();
 };
 
-const originalOpenReels = document.getElementById('reelsToggleBtn').click;
-document.getElementById('reelsToggleBtn').addEventListener('click', function() {
-    // اصل میں پہلے سے ہی کھلتا ہے، اس میں pushModalState شامل کریں
-    setTimeout(pushModalState, 100);
+// اب ہر ویڈیو کارڈ پر کلک کرنے سے reels کھلے گا
+document.addEventListener('click', function(e) {
+    // چیک کریں کہ کلک ویڈیو کارڈ پر ہوا ہے یا نہیں
+    const videoCard = e.target.closest('.video-card');
+    if (videoCard) {
+        const id = parseInt(videoCard.dataset.id);
+        const video = state.videos.find(v => v.id === id);
+        if (video) {
+            e.preventDefault();
+            // ویڈیو موڈل کی بجائے reels کھولیں
+            openReelsFromVideo(video);
+            pushModalState();
+        }
+    }
 });
 
 // بیک بٹن دبانے پر موڈل بند کریں
