@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - V3.6.1</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- ✅ Login Screen — جب تک صحیح ای میل/پاس ورڈ نہ آئے، آگے کچھ نظر نہیں آئے گا -->
+    <div id="adminLoginScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f4f4f4;">
+        <form id="adminLoginForm" style="background:#fff; padding:32px 28px; border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,0.12); width:100%; max-width:340px;">
+            <h2 style="margin:0 0 18px; text-align:center;">🔐 Admin Login</h2>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label for="adminEmail">Email</label>
+                <input type="email" id="adminEmail" required autocomplete="username" style="width:100%; padding:8px; margin-top:4px; box-sizing:border-box;">
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label for="adminPasswordInput">Password</label>
+                <input type="password" id="adminPasswordInput" required autocomplete="current-password" style="width:100%; padding:8px; margin-top:4px; box-sizing:border-box;">
+            </div>
+            <div id="adminLoginError" style="color:#d32f2f; font-size:0.85rem; min-height:18px; margin-bottom:10px;"></div>
+            <button type="submit" class="btn-primary" style="width:100%;">Login</button>
+        </form>
+    </div>
+
+    <!-- ✅ اصل Admin پینل — صرف صحیح login کے بعد نظر آئے گا -->
+    <div id="adminAppContent" style="display:none;">
+    <header class="admin-header">
+        <div class="header-left">
+            <a href="/" class="logo">
+                <span class="logo-icon">▶</span>
+                <span class="logo-text">TrendyReels Admin</span>
+            </a>
+        </div>
+        <div class="header-right">
+            <button id="adminLogoutBtn" class="btn-secondary" style="margin-right:8px;">🚪 Logout</button>
+            <button id="adminThemeToggle" aria-label="Toggle theme">🌙</button>
+        </div>
+    </header>
+
+    <nav class="admin-nav">
+        <button class="admin-tab active" data-tab="videos">📹 Videos</button>
+        <button class="admin-tab" data-tab="ads">📢 Ads</button>
+        <button class="admin-tab" data-tab="categories">🏷️ Categories</button>
+        <button class="admin-tab" data-tab="settings">⚙️ Settings</button>
+        <button class="admin-tab" data-tab="gallery">📸 Gallery</button>
+        <button class="admin-tab" data-tab="linkcleaner">🧹 Link Cleaner</button>
+        <button class="admin-tab" data-tab="duplicates">🔄 Duplicates</button>
+        <button class="admin-tab" data-tab="comments">💬 Comments</button>
+    </nav>
+
+    <main class="admin-content">
+        <!-- Videos Tab -->
+        <section id="videosTab" class="admin-tab-content active">
+            <div class="admin-actions">
+                <button id="addVideoBtn" class="btn-primary">➕ Add Video</button>
+                <button id="bulkPublishBtn" class="btn-secondary">✅ Publish All</button>
+                <button id="bulkMarkReelBtn" class="btn-secondary">🎬 Mark as Reel</button>
+                <button id="bulkDeleteBtn" class="btn-danger">🗑 Delete Selected</button>
+                
+                <!-- Bulk Category Assign with Preview -->
+<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center;">
+    <span style="font-weight:500; font-size:0.9rem;">📂 Assign Category:</span>
+    <select id="bulkCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+        <option value="">Select Category...</option>
+    </select>
+    <button id="previewAssignBtn" class="btn-secondary">👁 Preview Selected</button>
+    <button id="bulkAssignCategoryBtn" class="btn-primary" style="display:none;">✅ Confirm Assign</button>
+</div>
+
+<!-- Preview Area for Bulk Assign -->
+<div id="bulkAssignPreviewContainer" style="display:none; margin-top:15px; border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9;">
+    <h5 style="margin-bottom:10px;">📹 Selected Videos (to be assigned):</h5>
+    <div id="bulkAssignPreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;"></div>
+</div>
+                <!-- Bulk Delete by Category with Preview -->
+<div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; align-items:center; border-top:1px solid #ddd; padding-top:10px;">
+    <span style="font-weight:500; font-size:0.9rem;">🗑 Delete by Category:</span>
+    <select id="bulkDeleteCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+        <option value="">Select Category...</option>
+    </select>
+    <button id="previewDeleteCategoryBtn" class="btn-secondary">👁 Preview Videos</button>
+    <button id="bulkDeleteByCategoryBtn" class="btn-danger" style="display:none;">🔥 Confirm Delete</button>
+</div>
+
+<!-- Preview Area (یہ چھپا ہوا ہوگا، پریویو بٹن دبانے پر کھلے گا) -->
+<div id="bulkDeletePreviewContainer" style="display:none; margin-top:15px; border:1px solid #ddd; border-radius:8px; padding:10px; background:#f9f9f9;">
+    <h5 style="margin-bottom:10px;">📹 Videos in this category:</h5>
+    <div id="bulkDeletePreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;"></div>
+</div>
+                <!-- 3 Bot Buttons -->
+                <div style="display:flex; flex-wrap:wrap; gap:8px; width:100%; margin-top:10px; border-top:1px solid #ddd; padding-top:15px;">
+                    <button id="runYoutubeBot" class="btn-secondary" style="background:#1a73e8; color:white; flex:1; min-width:100px;">▶ YouTube</button>
+                    <button id="runPixabayBot" class="btn-secondary" style="background:#25D366; color:white; flex:1; min-width:100px;">▶ Pixabay</button>
+                    <button id="runDailymotionBot" class="btn-secondary" style="background:#0066ff; color:white; flex:1; min-width:100px;">▶ Dailymotion</button>
+                </div>
+
+                <!-- Bulk Upload Section -->
+                <div style="width:100%; margin-top:15px; border-top:2px solid #eee; padding-top:15px;">
+                    <h3 style="margin-bottom:10px;">📁 Bulk Upload (CSV / JSON)</h3>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="file" id="bulkFileInput" accept=".csv,.json" style="padding:10px; border:1px solid #ccc; border-radius:5px; background:#fff;">
+                        <button id="uploadBulkBtn" class="btn-primary" style="width:100%;">🚀 Upload & Process</button>
+                        <div id="uploadProgress" style="font-size:0.9rem; color:#666; display:none;">Processing...</div>
+                        <div id="uploadResult" style="font-size:0.9rem; color:#4CAF50; display:none;"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Smart Filter Bot -->
+<div style="margin-top:20px; border-top:1px solid #ddd; padding-top:15px;">
+    <button id="openSmartFilterBtn" class="btn-secondary">🔍 Smart Filter</button>
+    
+    <div id="smartFilterPanel" style="display:none; margin-top:15px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:15px;">
+            <select id="filterCategory" style="padding:8px; border:1px solid #ccc; border-radius:5px; min-width:120px;">
+                <option value="">All Categories</option>
+            </select>
+            <input type="text" id="filterKeyword" placeholder="Keyword in title..." style="padding:8px; border:1px solid #ccc; border-radius:5px; min-width:150px;">
+            <select id="filterTime" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+                <option value="">Any time</option>
+                <option value="7">Last 1 Week</option>
+                <option value="30">Last 1 Month</option>
+                <option value="90">Last 3 Months</option>
+                <option value="180">Last 6 Months</option>
+                <option value="365">Last 1 Year</option>
+            </select>
+            <button id="applyFilterBtn" class="btn-primary">Apply Filter</button>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="filterPreviewContainer" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+            <h5 style="margin-bottom:10px;">📹 Filtered Videos (Preview):</h5>
+            <div id="filterPreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; max-height:300px; overflow-y:auto;"></div>
+            
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; align-items:center;">
+                <button id="deleteFilteredBtn" class="btn-danger" style="display:none;">🗑 Delete All Filtered</button>
+                
+                <span id="assignFilteredWrapper" style="display:none; display:flex; gap:10px; align-items:center;">
+                    <select id="assignFilteredCategorySelect" style="padding:8px; border:1px solid #ccc; border-radius:5px;">
+                        <option value="">Select Category...</option>
+                    </select>
+                    <button id="assignFilteredBtn" class="btn-secondary">📂 Assign Category</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+    <tr>
+        <th><input type="checkbox" id="selectAll"></th>
+        <th>Thumb</th>         <!-- یہ نیا کالم ہے -->
+        <th>Title</th>
+        <th>Category</th>
+        <th>Embed</th>
+        <th>Copyright</th>
+        <th>🎬 Reel</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+                    </thead>
+                    <tbody id="adminVideoTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Ads Tab -->
+        <section id="adsTab" class="admin-tab-content">
+            <h2>Adsterra Ad Manager</h2>
+            <div class="ad-slots-grid" id="adSlotsGrid"></div>
+        </section>
+
+        <!-- ✅ NEW: Comments Tab -->
+        <section id="commentsTab" class="admin-tab-content">
+            <h2>💬 Comments Moderation</h2>
+            <div id="adminCommentsList">Loading...</div>
+        </section>
+
+        <!-- 🆕 NEW: Categories Tab -->
+        <section id="categoriesTab" class="admin-tab-content">
+            <h2>🏷️ Category Manager</h2>
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <input type="text" id="newCategoryInput" placeholder="Enter new category name..." style="flex:1; padding:10px; border:1px solid #ccc; border-radius:5px;">
+                <button id="addCategoryBtn" class="btn-primary">➕ Add</button>
+            </div>
+            <div id="categoryList" style="display:flex; flex-direction:column; gap:8px;">
+                <!-- Rendered by JS -->
+            </div>
+        </section>
+        <!-- Duplicates Tab -->
+<section id="duplicatesTab" class="admin-tab-content">
+    <h2>🔄 Duplicate Review Panel</h2>
+    <div id="duplicateList" style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+        <!-- Rendered by JS -->
+    </div>
+    <div style="margin-top:15px;">
+        <button id="refreshDuplicatesBtn" class="btn-secondary">🔄 Refresh</button>
+    </div>
+</section>
+        <!-- نیا ٹیب: Link Cleaner & Exporter -->
+<section id="linkcleanerTab" class="admin-tab-content">
+    <h2>🧹 Link Cleaner & Exporter (File to File)</h2>
+    <div class="admin-actions" style="flex-direction:column; gap:15px; align-items:flex-start;">
+        <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">
+            Upload a text or CSV file. The system will extract URLs, Titles, and Categories, and provide a clean file for download.
+        </p>
+        
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <input type="file" id="cleanerFileInput" accept=".txt,.csv" style="padding:8px; border:1px solid #ccc; border-radius:5px; background:#fff; min-width:200px;">
+            <button id="processCleanerBtn" class="btn-primary">⚙️ Process & Clean</button>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="cleanerPreviewContainer" style="display:none; margin-top:15px; width:100%;">
+            <h4 style="margin-bottom:10px;">Preview (Cleaned Data)</h4>
+            <div id="cleanerPreviewTable" style="max-height:300px; overflow-y:auto; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9;"></div>
+            
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button id="downloadCleanedCsvBtn" class="btn-primary" style="display:none;">⬇ Download CSV</button>
+                <button id="downloadCleanedJsonBtn" class="btn-secondary" style="display:none;">⬇ Download JSON</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+        <!-- Settings Tab -->
+        <section id="settingsTab" class="admin-tab-content">
+            <h2>Settings</h2>
+            <div class="settings-card">
+                <h3>Theme Preference</h3>
+                <label class="toggle-switch"><input type="checkbox" id="adminThemeSwitch"><span class="slider"></span></label>
+                <span>Dark Mode</span>
+            </div>
+            <div class="settings-card">
+                <h3>Site Information</h3>
+                <p><strong>Version:</strong> 1.0.0</p>
+                <p><strong>Total Videos:</strong> <span id="totalVideosCount">0</span></p>
+                <p><strong>Database:</strong> Supabase (Connected)</p>
+            </div>
+            <!-- Backup & Restore Card -->
+<div class="settings-card">
+    <h3>💾 Backup & Restore</h3>
+    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
+        <button id="downloadBackupBtn" class="btn-secondary">📥 Download Backup</button>
+        
+        <div style="display:flex; gap:10px; align-items:center;">
+            <span style="font-size:0.9rem; font-weight:bold;">Restore:</span>
+            <input type="file" id="restoreFileInput" accept=".json" style="padding:6px; border:1px solid #ccc; border-radius:5px; background:#fff;">
+            <button id="restoreBackupBtn" class="btn-danger">⚠️ Upload & Restore</button>
+        </div>
+    </div>
+    <p style="font-size:0.8rem; color:#888; margin-top:10px;">
+        <strong>Warning:</strong> Restoring a backup will <b>permanently delete ALL current videos</b> and replace them with the backup data.
+    </p>
+</div>
+        </section>
+        <!-- Gallery Tab with Global Search -->
+<section id="galleryTab" class="admin-tab-content">
+    <h2>📸 Gallery & Global Search</h2>
+    
+    <!-- Search & Filter Bar -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:8px; border:1px solid #eee;">
+        <input type="text" id="gallerySearchInput" placeholder="Search by Title or URL..." style="flex:1; min-width:150px; padding:10px; border:1px solid #ccc; border-radius:5px;">
+        <select id="galleryCategoryFilter" style="padding:10px; border:1px solid #ccc; border-radius:5px; min-width:120px;">
+            <option value="all">All Categories</option>
+        </select>
+        <button id="gallerySearchBtn" class="btn-primary">🔍 Search</button>
+        <button id="galleryResetBtn" class="btn-secondary">🔄 Reset</button>
+    </div>
+
+    <!-- Video Grid Preview -->
+    <div id="adminGalleryGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px;"></div>
+</section>
+    </main>
+
+    <!-- Add Video Modal -->
+    <div id="addVideoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Add New Video</h2>
+            <form id="addVideoForm">
+                <div class="form-group">
+                    <label for="videoEmbed">Embed Code (YouTube/Dailymotion)</label>
+                    <textarea id="videoEmbed" name="embed" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="videoCategory">Category</label>
+                    <select id="videoCategory" name="category" required></select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="videoCopyrightFree" name="copyrightFree"> Copyright Free</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="videoIsReel" name="isReel"> 🎬 Mark as Reel</label>
+                </div>
+                <button type="submit" class="btn-primary">Add Video</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Panel Modal -->
+    <div id="reviewPanelModal" class="modal">
+        <div class="modal-content" style="max-width:900px; width:95%; max-height:85vh; overflow-y:auto; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 id="reviewPanelTitle">Review Videos</h2>
+                <button id="closeReviewPanel" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="reviewPanelList" style="display:flex; flex-direction:column; gap:10px;"></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button id="reviewPanelSave" class="btn-primary">💾 Save Selected</button>
+                <button id="reviewPanelCancel" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+    </div><!-- /#adminAppContent -->
+
+    <script src="script.js"></script>
+</body>
+</html>
