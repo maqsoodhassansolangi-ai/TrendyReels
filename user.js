@@ -156,6 +156,9 @@ function escapeHtml(str) {
 let reelsHistoryPushed = false;
 let reelsObserver = null;
 let reelsMuted = true;
+// ✅ NEW: فعال Reel کا adapter/poller — تاکہ mute/play/pause/progress سب کو ایک ہی جگہ سے کنٹرول کیا جا سکے
+let activeReelAdapter = null;
+let activeReelProgressPoller = null;
 
 function openReelsView(startVideoId = null) {
     const view = document.getElementById('reelsView');
@@ -165,15 +168,25 @@ function openReelsView(startVideoId = null) {
     if (reels.length === 0) {
         container.innerHTML = `<div class="reel-empty-msg">🎬 ابھی کوئی Reel شامل نہیں کی گئی۔<br>Admin پینل سے کسی ویڈیو کو "Mark as Reel" کریں۔</div>`;
     } else {
+        // ✅ NEW: YouTube/Dailymotion کی official Player API فوراً (eagerly) لوڈ کرنا شروع کر دیں —
+        // اس طرح جب یوزر پہلی reel تک پہنچے تو API پہلے سے تیار ہو، cold-start تاخیر (پہلے 5-7 منٹ تک ساکن رہنے کی اصل وجہ) ختم ہو
+        loadYouTubeAPI();
+        loadDailymotionAPI();
+
         container.innerHTML = reels.map((v) => {
-            const isVideoTag = v.embed_code && v.embed_code.trim().startsWith('<video');
+            const provider = getVideoProvider(v.embed_code);
             let mediaHtml = '';
-            if (isVideoTag) {
+            if (provider.type === 'native') {
                 const srcMatch = v.embed_code.match(/src="([^"]+)"/);
                 const posterMatch = v.embed_code.match(/poster="([^"]+)"/);
                 const src = srcMatch ? srcMatch[1] : '';
                 const poster = posterMatch ? posterMatch[1] : '';
-                mediaHtml = `<video class="reel-media" data-src="${src}" playsinline loop poster="${poster}"></video>`;
+                mediaHtml = `<video class="reel-media" data-src="${src}" playsinline poster="${poster}"></video>`;
+            } else if (provider.type === 'youtube' || provider.type === 'dailymotion') {
+                // ✅ NEW: پرانا طریقہ ہر بار iframe کا پورا src بدل کر (یعنی پورا YouTube صفحہ) دوبارہ لوڈ کرتا تھا —
+                // یہی سب سے بڑی وجہ تھی reels کے سست/بفرنگ ہونے کی۔ اب اسی official Player API کا استعمال ہوگا
+                // جو ویڈیو modal میں پہلے سے استعمال ہو رہی ہے — بہت تیز، اور real play/pause/progress کنٹرول بھی ملتا ہے۔
+                mediaHtml = `<div class="reel-media reel-player-target"></div>`;
             } else {
                 const embedUrl = extractEmbedUrl(v.embed_code);
                 mediaHtml = `<iframe class="reel-media" data-src="${embedUrl}" allow="autoplay; fullscreen" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
@@ -181,6 +194,11 @@ function openReelsView(startVideoId = null) {
             return `
                 <div class="reel-slide" data-video-id="${v.id}">
                     ${mediaHtml}
+                    <div class="reel-progress-track"><div class="reel-progress-fill"></div></div>
+                    <div class="reel-side-controls">
+                        <button class="reel-playpause-btn" title="Play/Pause">⏸</button>
+                        ${v.is_copyright_free ? `<button class="reel-download-btn" title="Download">⬇</button>` : ''}
+                    </div>
                     <div class="reel-info">${v.title || ''}</div>
                 </div>
             `;
@@ -188,12 +206,42 @@ function openReelsView(startVideoId = null) {
 
         setupReelsObserver(startVideoId);
 
+        // ✅ FIX: پہلے mute بٹن پوری slide کو دوبارہ (from scratch) activate کر دیتا تھا — یعنی YouTube/Dailymotion
+        // کی صورت میں پورا پلیئر دوبارہ بنتا تھا اور ویڈیو ایک لمحے کے لیے رک/بفر ہو جاتی تھی۔
+        // اب صرف adapter.setMuted() کالی جاتی ہے — فوری، بغیر reload کے۔
         document.getElementById('reelMuteBtn').onclick = () => {
             reelsMuted = !reelsMuted;
             document.getElementById('reelMuteBtn').textContent = reelsMuted ? '🔇' : '🔊';
-            const activeSlide = container.querySelector('.reel-slide.reel-active');
-            if (activeSlide) activateReelSlide(activeSlide); // نئی mute state کے ساتھ دوبارہ چلائیں
+            if (activeReelAdapter) activeReelAdapter.setMuted(reelsMuted);
         };
+
+        // ✅ NEW: سکرین پر کہیں بھی ٹیپ کرنے سے play/pause ٹوگل ہو — عام Reels ایپس جیسا رویہ
+        container.querySelectorAll('.reel-slide').forEach(slide => {
+            slide.addEventListener('click', (e) => {
+                if (e.target.closest('.reel-playpause-btn, .reel-download-btn')) return;
+                toggleActiveReelPlayback();
+            });
+        });
+        container.querySelectorAll('.reel-playpause-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); toggleActiveReelPlayback(); });
+        });
+        // ✅ NEW: Download بٹن — صرف Copyright-Free ویڈیوز پر نظر آئے گا
+        container.querySelectorAll('.reel-download-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const slide = btn.closest('.reel-slide');
+                const vid = state.videos.find(v => v.id == slide.dataset.videoId);
+                if (!vid) return;
+                if (vid.embed_code.trim().startsWith('<video')) {
+                    const srcMatch = vid.embed_code.match(/src="([^"]+)"/);
+                    if (srcMatch) window.open(srcMatch[1], '_blank');
+                } else {
+                    const embedUrl = extractEmbedUrl(vid.embed_code);
+                    const ytMatch = embedUrl.match(/\/embed\/([a-zA-Z0-9_-]{11})/);
+                    window.open(ytMatch ? `https://www.youtube.com/watch?v=${ytMatch[1]}` : embedUrl, '_blank');
+                }
+            });
+        });
     }
 
     view.classList.add('active');
@@ -204,13 +252,34 @@ function openReelsView(startVideoId = null) {
     }
 }
 
+// ✅ NEW: فعال reel کا play/pause ٹوگل کریں (تینوں providers کے لیے یکساں کام کرتا ہے)
+function toggleActiveReelPlayback() {
+    if (!activeReelAdapter) return;
+    const btn = document.querySelector('.reel-slide.reel-active .reel-playpause-btn');
+    if (activeReelAdapter.isPaused()) {
+        activeReelAdapter.play();
+        if (btn) btn.textContent = '⏸';
+    } else {
+        activeReelAdapter.pause();
+        if (btn) btn.textContent = '▶';
+    }
+}
+
+// ✅ NEW: فعال reel کا پلیئر مکمل روک کر صاف کریں (اگلی reel چلنے سے پہلے ضروری، ورنہ آواز/بفرنگ اوورلیپ ہوتی ہے)
+function stopActiveReelPlayer() {
+    if (activeReelProgressPoller) { clearInterval(activeReelProgressPoller); activeReelProgressPoller = null; }
+    if (activeReelAdapter) { try { activeReelAdapter.pause(); activeReelAdapter.destroy(); } catch (e) {} activeReelAdapter = null; }
+}
+
 function closeReelsView(fromPopstate = false) {
     const view = document.getElementById('reelsView');
     view.classList.remove('active');
+    stopActiveReelPlayer();
     document.querySelectorAll('#reelsContainer .reel-media').forEach(el => {
         if (el.tagName === 'VIDEO') el.pause();
         else if (el.tagName === 'IFRAME') el.src = 'about:blank';
     });
+    document.querySelectorAll('#reelsContainer .reel-player-target').forEach(t => t.innerHTML = '');
     if (reelsObserver) { reelsObserver.disconnect(); reelsObserver = null; }
     if (reelsHistoryPushed) {
         reelsHistoryPushed = false;
@@ -219,27 +288,113 @@ function closeReelsView(fromPopstate = false) {
 }
 
 function activateReelSlide(slideEl) {
-    const media = slideEl.querySelector('.reel-media');
-    if (!media) return;
-    if (media.tagName === 'VIDEO') {
-        if (!media.src) media.src = media.dataset.src;
-        media.muted = reelsMuted;
-        media.play().catch(() => {});
-    } else if (media.tagName === 'IFRAME') {
-        const baseUrl = media.dataset.src;
-        const sep = baseUrl.includes('?') ? '&' : '?';
-        media.src = `${baseUrl}${sep}autoplay=1&mute=${reelsMuted ? 1 : 0}`;
-    }
-    // ✅ Watch History میں شامل کریں
+    stopActiveReelPlayer(); // ✅ پچھلی reel کا پلیئر پہلے مکمل بند کریں
+
     const vid = state.videos.find(v => v.id == slideEl.dataset.videoId);
-    if (vid) addToHistory(vid);
+    if (!vid) return;
+    const provider = getVideoProvider(vid.embed_code);
+    const progressFill = slideEl.querySelector('.reel-progress-fill');
+    const playPauseBtn = slideEl.querySelector('.reel-playpause-btn');
+
+    // ✅ NEW: adapter ملنے کے بعد اسے فعال بنائیں، چلائیں، اور progress bar جوڑیں (تینوں providers کے لیے مشترکہ)
+    function bindReelAdapter(adapter) {
+        activeReelAdapter = adapter;
+        adapter.setMuted(reelsMuted);
+        adapter.play();
+        if (playPauseBtn) playPauseBtn.textContent = '⏸';
+        function updateReelProgress() {
+            const duration = adapter.getDuration();
+            const current = adapter.getCurrentTime();
+            if (progressFill && duration > 0) progressFill.style.width = ((current / duration) * 100) + '%';
+        }
+        if (adapter.usesRealTimeEvents) {
+            adapter.onTimeUpdate(updateReelProgress);
+        } else {
+            activeReelProgressPoller = setInterval(updateReelProgress, 400);
+        }
+    }
+
+    if (provider.type === 'native') {
+        const media = slideEl.querySelector('video.reel-media');
+        if (!media) return;
+        if (!media.src) media.src = media.dataset.src;
+        media.loop = true; // ✅ Reel خودکار لوپ ہو
+        bindReelAdapter(createNativeAdapter(media));
+    } else if (provider.type === 'youtube') {
+        const target = slideEl.querySelector('.reel-player-target');
+        if (!target) return;
+        loadYouTubeAPI().then(() => {
+            if (!slideEl.classList.contains('reel-active')) return; // ✅ اتنی دیر میں یوزر آگے بڑھ چکا ہو تو کچھ نہ کریں
+            const ytPlayer = new YT.Player(target, {
+                videoId: provider.id,
+                playerVars: { controls: 0, rel: 0, modestbranding: 1, playsinline: 1, loop: 1, playlist: provider.id, mute: reelsMuted ? 1 : 0 },
+                events: {
+                    onReady: () => bindReelAdapter(createYouTubeAdapter(ytPlayer)),
+                    onStateChange: (e) => {
+                        if (!playPauseBtn) return;
+                        if (e.data === 1) playPauseBtn.textContent = '⏸';
+                        else if (e.data === 2) playPauseBtn.textContent = '▶';
+                    }
+                }
+            });
+        });
+    } else if (provider.type === 'dailymotion') {
+        const target = slideEl.querySelector('.reel-player-target');
+        if (!target) return;
+        loadDailymotionAPI().then(() => {
+            if (!slideEl.classList.contains('reel-active')) return;
+            DM.player(target, {
+                video: provider.id,
+                params: { controls: false, autoplay: true, mute: reelsMuted, loop: true, 'sharing-enable': false, ui_start_screen_info: false }
+            }).then((dmPlayer) => {
+                dmPlayer.addEventListener('apiready', () => bindReelAdapter(createDailymotionAdapter(dmPlayer)));
+                dmPlayer.addEventListener('play', () => { if (playPauseBtn) playPauseBtn.textContent = '⏸'; });
+                dmPlayer.addEventListener('pause', () => { if (playPauseBtn) playPauseBtn.textContent = '▶'; });
+            }).catch(() => {});
+        });
+    } else {
+        // ✅ نامعلوم پلیٹ فارم — پرانا محفوظ fallback (کوئی کسٹم کنٹرول دستیاب نہیں)
+        const media = slideEl.querySelector('iframe.reel-media');
+        if (media) {
+            const baseUrl = media.dataset.src;
+            const sep = baseUrl.includes('?') ? '&' : '?';
+            media.src = `${baseUrl}${sep}autoplay=1&mute=${reelsMuted ? 1 : 0}`;
+        }
+    }
+
+    // ✅ NEW: اگلی reel کا native ویڈیو خاموشی سے پہلے سے buffer کرنا شروع کر دیں (windowing) —
+    // تاکہ جب یوزر swipe کرے تو وہ فوری چلے، دوبارہ سے شروع سے بفر نہ ہو
+    preloadNextReelVideo(slideEl);
+
+    // ✅ Watch History میں شامل کریں
+    addToHistory(vid);
+}
+
+// ✅ NEW: اگلی reel (اگر native ویڈیو ہے) کا src پہلے سے لگا دیں تاکہ browser خاموشی سے بفرنگ شروع کر دے
+function preloadNextReelVideo(currentSlideEl) {
+    const next = currentSlideEl.nextElementSibling;
+    if (!next || !next.classList || !next.classList.contains('reel-slide')) return;
+    const media = next.querySelector('video.reel-media');
+    if (media && !media.src && media.dataset.src) {
+        media.preload = 'auto';
+        media.src = media.dataset.src;
+    }
 }
 
 function deactivateReelSlide(slideEl) {
-    const media = slideEl.querySelector('.reel-media');
-    if (!media) return;
-    if (media.tagName === 'VIDEO') media.pause();
-    else if (media.tagName === 'IFRAME') media.src = 'about:blank';
+    const media = slideEl.querySelector('video.reel-media');
+    // ✅ FIX: پہلے src خالی نہیں ہوتا تھا صرف pause ہوتا تھا (native کے لیے یہ ٹھیک ہی تھا)۔
+    // اب بھی صرف pause کرتے ہیں — دوبارہ اسی reel پر آنے پر فوری چلے، دوبارہ بفر نہ کرنا پڑے۔
+    if (media) media.pause();
+    const iframe = slideEl.querySelector('iframe.reel-media');
+    if (iframe && iframe.src && iframe.src !== 'about:blank') iframe.src = 'about:blank';
+    // ✅ NEW: YouTube/Dailymotion پلیئر کو مکمل ہٹا دیں — ورنہ وہ پس منظر میں چلتا/بفر کرتا رہتا ہے
+    const target = slideEl.querySelector('.reel-player-target');
+    if (target) target.innerHTML = '';
+    const playPauseBtn = slideEl.querySelector('.reel-playpause-btn');
+    if (playPauseBtn) playPauseBtn.textContent = '⏸';
+    const progressFill = slideEl.querySelector('.reel-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
 }
 
 function setupReelsObserver(startVideoId = null) {

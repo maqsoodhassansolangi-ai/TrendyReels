@@ -109,6 +109,25 @@ body.dark-mode {
     transition: transform 0.2s;
 }
 .header-right button:hover { transform: scale(1.1); }
+/* ✅ NEW: PWA Install بٹن — ڈیفالٹ چھپا ہوا، صرف JS اسے دکھائے گا جب انسٹال ممکن ہو */
+#installAppBtn { display: none; }
+#installAppBtn.show { display: inline-block; }
+
+/* ✅ NEW: Progress Modal — Bulk Save/Delete/Publish/Assign وغیرہ کے لیے مشترکہ پروگریس بار */
+.tr-progress-track {
+    width: 100%;
+    height: 14px;
+    background: #eee;
+    border-radius: 8px;
+    overflow: hidden;
+}
+body.dark-mode .tr-progress-track { background: #333; }
+.tr-progress-fill {
+    height: 100%;
+    background: var(--primary-red);
+    width: 0%;
+    transition: width 0.15s ease;
+}
 
 /* Category Nav */
 .category-nav {
@@ -916,6 +935,51 @@ body.dark-mode .history-item {
     height: 100%;
     object-fit: contain;
     background: #000;
+}
+/* ✅ NEW: YouTube/Dailymotion Player API کا ٹارگٹ div — یہ اصل iframe کو اندر بناتا ہے */
+.reel-player-target {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+.reel-player-target iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+}
+/* ✅ NEW: اوپر پتلی progress bar */
+.reel-progress-track {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.25);
+    z-index: 20;
+}
+.reel-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--primary-red);
+}
+/* ✅ NEW: دائیں طرف Play/Pause اور Download بٹنز (mute بٹن کے اوپر سٹیک) */
+.reel-side-controls {
+    position: absolute;
+    right: 14px;
+    bottom: 84px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 20;
+}
+.reel-playpause-btn, .reel-download-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
 }
 .reel-slide .reel-info {
     position: absolute;
